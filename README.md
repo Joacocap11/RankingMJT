@@ -6,40 +6,54 @@ categoría: en el futuro se podrán agregar otras (Alfajores, Cervezas, etc.) si
 rediseñar la arquitectura de base.
 
 > ⚠️ **Seguridad**: esta versión **no implementa autenticación/login**. La API
-> queda abierta dentro del entorno de desarrollo. **No debe exponerse
+> queda abierta dentro del entorno de desarrollo/LAN. **No debe exponerse
 > directamente a Internet** sin agregar autenticación/protección adicional
 > (reverse proxy con auth, VPN, etc.). Pensada para uso personal en
 > local/LAN únicamente.
 
 ## Estado actual
 
-- Fase: **100% desarrollo local**. No hay deploy remoto ni infraestructura de
-  Proxmox involucrada.
+- Desarrollo local: Docker Compose, ver [Cómo levantar el entorno dev](#cómo-levantar-el-entorno-dev).
+- Deploy: corriendo en un contenedor del homelab personal, solo accesible
+  dentro de la LAN doméstica (sin exposición a Internet, sin DNS público, sin
+  IP pública). La dirección concreta no se documenta aquí a propósito — ver
+  [Producción](#producción) para la forma de desplegarlo vos mismo.
 - Sin login/auth.
-- Repo pensado para ser público — ver [Seguridad / .gitignore](#seguridad--gitignore).
+- Repo público — ver [Seguridad / .gitignore](#seguridad--gitignore).
 
 ## Arquitectura
 
 ```mermaid
 flowchart LR
-    subgraph Docker Compose (dev)
+    subgraph Dev [Docker Compose - dev]
         FE["frontend (Vite dev server)\nlocalhost:3003"] -- "/api, /uploads proxy" --> API["api (FastAPI)\nlocalhost:8003"]
         API --> DB[("Postgres\n127.0.0.1:5433")]
         API -- "static files" --> UP[["backend/uploads"]]
     end
-    MOB["mobile (Expo)\nEXPO_PUBLIC_API_BASE_URL"] -- "http (LAN/emulator)" --> API
+    subgraph Prod [Docker Compose - prod, docker-compose.prod.yml]
+        NGX["frontend (nginx + build estático)\nLAN:3003"] -- "/api, /uploads proxy_pass" --> API2["api (FastAPI, sin puerto publicado)"]
+        API2 --> DB2[("Postgres\nsin puerto publicado")]
+        API2 -- "named volume" --> UP2[["uploads volume"]]
+    end
+    MOB["mobile (Expo)\nEXPO_PUBLIC_API_BASE_URL"] -- "http (LAN/emulador)" --> API
 ```
 
 - **backend/**: FastAPI + SQLAlchemy 2 + Alembic + PostgreSQL. Expone `/api/v1`.
-- **frontend/**: React + TypeScript + Vite. Dev server en `3003`, proxy interno
-  hacia el backend (mismo origen desde el navegador, sin CORS que gestionar).
+- **frontend/**: React + TypeScript + Vite.
+  - Dev: dev server en `3003` con proxy interno hacia el backend (mismo
+    origen desde el navegador, sin CORS que gestionar).
+  - Prod: build estático servido por **nginx** (`frontend/Dockerfile.prod` +
+    `frontend/nginx.conf`), que además hace `proxy_pass` de `/api` y
+    `/uploads` hacia el servicio `api` — sigue siendo mismo origen desde el
+    navegador, cero CORS, cero URL de backend hardcodeada en el JS.
 - **mobile/**: Expo + React Native + Expo Router. Consume la misma API vía
   `EXPO_PUBLIC_API_BASE_URL`.
 - **docker-compose.yml**: orquesta `db`, `api`, `frontend` para desarrollo
-  reproducible. `mobile` corre aparte (Expo dev server), no está en compose.
-
-No se incluye ningún reverse proxy (nginx) en esta fase — se deja para una
-etapa posterior de despliegue, que **no** forma parte de este entregable.
+  reproducible (bind mounts, hot reload, puertos de debug expuestos).
+- **docker-compose.prod.yml**: override de producción — sin bind mounts, sin
+  puertos de `db`/`api` publicados al host, frontend servido por nginx,
+  datos persistidos en named volumes. `mobile` corre aparte (Expo dev
+  server), no está en compose.
 
 ## Stack
 
@@ -252,6 +266,74 @@ listado, alta y edición con Expo Router. Config de host vía
 `EXPO_PUBLIC_API_BASE_URL` (nunca hardcodeado en el código fuente) — ver
 [`mobile/.env.example`](mobile/.env.example) para las variantes de
 emulador/dispositivo físico.
+
+## Producción
+
+Deploy en un contenedor Docker/LXC del homelab personal, solo dentro de la
+LAN doméstica. Usa el mismo repo, con un override de compose:
+
+```bash
+# En el servidor, dentro de la carpeta del proyecto (ej. /srv/apps/RankingMJT)
+git clone https://github.com/joacocap11/RankingMJT.git
+cd RankingMJT
+git checkout main   # o el tag deseado, ej. v1.0.0
+
+# Crear el .env REAL solo en el servidor (nunca commitear este archivo)
+cp .env.example .env
+# Editar .env con credenciales de Postgres generadas de forma segura
+# (POSTGRES_PASSWORD real, no el placeholder de .env.example)
+
+docker compose -f docker-compose.yml -f docker-compose.prod.yml build
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+
+docker compose exec api alembic upgrade head
+docker compose exec api python -m app.seed
+```
+
+Diferencias clave respecto a dev (ver [`docker-compose.prod.yml`](docker-compose.prod.yml)):
+
+- `db` y `api` **no publican puertos al host** (solo alcanzables en la red
+  interna de Docker) — ni Postgres ni la API quedan expuestos por fuera del
+  frontend.
+- `frontend` se sirve como build estático de nginx
+  ([`frontend/Dockerfile.prod`](frontend/Dockerfile.prod) +
+  [`frontend/nginx.conf`](frontend/nginx.conf)), que hace `proxy_pass` de
+  `/api/` y `/uploads/` hacia `api:8000`. El navegador solo habla con un único
+  origen (el propio frontend); no hay CORS que configurar.
+- Persistencia en **named volumes** (`rankingmjt_postgres_data`,
+  `rankingmjt_uploads`): reconstruir o recrear `api`/`frontend` (`--build`,
+  `up -d`) nunca borra la base ni las imágenes subidas.
+- El `.env` real con las credenciales de producción vive **únicamente en el
+  servidor** y nunca se commitea.
+
+La URL de producción es una IP/hostname interno de la LAN del usuario — se
+omite intencionalmente de este README público; queda documentada solo en el
+entorno local del propietario.
+
+## Backups
+
+Estrategia simple, sin sistema de backup complejo:
+
+```bash
+# Dump de Postgres (custom format, restaurable con pg_restore)
+set -a; . ./.env; set +a
+./scripts/backup_postgres.sh          # escribe en ./backups/<db>_<timestamp>.dump
+
+# Copia de las imágenes subidas (named volume)
+./scripts/backup_uploads.sh rankingmjt_uploads   # escribe en ./backups/<volume>_<timestamp>.tar.gz
+```
+
+Restaurar Postgres desde un dump:
+
+```bash
+docker compose exec -T db pg_restore --clean --if-exists \
+  -U "$POSTGRES_USER" -d "$POSTGRES_DB" < backups/<archivo>.dump
+```
+
+`./backups/` está excluido de git (`.gitignore`) — contiene datos reales, no
+se versiona. Si el homelab ya tiene una estrategia general de backups (cron +
+retención), agregar estos dos comandos ahí siguiendo el mismo patrón que el
+resto de las apps del servidor.
 
 ## Screenshots
 

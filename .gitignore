@@ -69,6 +69,10 @@ backend/uploads/**
 pgdata/
 postgres-data/
 
+# --- Backups (produced by scripts/backup_*.sh, contain real data dumps) ---
+backups/
+*.dump
+
 # --- Logs / caches ---
 *.log
 logs/

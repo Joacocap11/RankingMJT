@@ -1,0 +1,39 @@
+# Production override. Use together with the base file:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+#
+# Differences from dev:
+# - db / api: no ports published to the host (only reachable on the internal
+#   docker network); dev's bind mounts are replaced by named volumes so
+#   rebuilding/recreating api or frontend never touches Postgres data or
+#   uploaded files.
+# - frontend: built as a static bundle served by nginx (frontend/Dockerfile.prod),
+#   which proxies /api and /uploads to the api service (same-origin from the
+#   browser's point of view, so CORS never comes into play in production).
+# - Real secrets (POSTGRES_PASSWORD, etc.) still come only from the
+#   server-local, never-committed `.env` file — nothing sensitive lives here.
+
+services:
+  db:
+    ports: !reset []
+    volumes: !override
+      - postgres_data:/var/lib/postgresql/data
+
+  api:
+    ports: !reset []
+    volumes: !override
+      - uploads:/app/uploads
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.prod
+    environment: !reset {}
+    volumes: !override []
+    ports: !override
+      - "${WEB_PORT:-3003}:80"
+
+volumes:
+  postgres_data:
+  uploads:
