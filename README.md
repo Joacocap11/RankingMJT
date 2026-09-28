@@ -253,6 +253,14 @@ listado, alta y edición con Expo Router. Config de host vía
 [`mobile/.env.example`](mobile/.env.example) para las variantes de
 emulador/dispositivo físico.
 
+## Screenshots
+
+_(Placeholder — agregar capturas de la web y mobile aquí)._
+
+- `docs/screenshots/web-ranking.png` — vista principal "Ranking Monsters".
+- `docs/screenshots/web-form.png` — alta/edición de un Monster.
+- `docs/screenshots/mobile-ranking.png` — pantalla principal mobile.
+
 ## Seguridad / .gitignore
 
 Repositorio pensado para ser **público**. El `.gitignore` de la raíz excluye
@@ -270,6 +278,7 @@ secretos/patrones sensibles.
 - [ ] Nueva sección: **Alfajores**.
 - [ ] Nueva sección: **Cervezas**.
 - [ ] Generalizar el concepto de "ranking" a más categorías si hace falta.
-- [ ] Deploy (Proxmox/homelab) — **fuera de alcance de esta fase**.
-- [ ] Reverse proxy (nginx) para producción — no implementado todavía.
-- [ ] Mobile: EAS Update / build de APK.
+- [ ] Navegación por categorías (Monsters / Alfajores / Cervezas / ...) en vez de una sola pantalla fija.
+- [x] Deploy en homelab (Proxmox/CT) para uso propio en LAN.
+- [ ] Reverse proxy (nginx) — implementado en producción para servir el frontend y proxyear `/api/v1` y `/uploads` al backend; pendiente evaluar TLS/otra capa de protección antes de exponer fuera de la LAN.
+- [ ] Mobile: EAS Update / build de APK / My Apps (no incluido en esta fase).
