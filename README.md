@@ -305,6 +305,15 @@ la config sensible/no versionada del proyecto.
 
 No se hace EAS Update/OTA ni publicación a Play Store en esta fase.
 
+**HTTP cleartext en Android**: la API de RankingMJT se consume por `http://`
+dentro de la LAN doméstica (sin TLS todavía). Android bloquea tráfico
+cleartext por defecto para apps que targetean API 28+. Se habilitó
+explícitamente vía `expo-build-properties`
+(`android.usesCleartextTraffic: true` en `app.json`, plugin gestionado, sin
+tocar código nativo a mano) — resulta en `android:usesCleartextTraffic="true"`
+en el manifest final. Cuando el backend migre a HTTPS, esta excepción debería
+poder eliminarse.
+
 ## Producción
 
 Deploy en un contenedor Docker/LXC del homelab personal, solo dentro de la
