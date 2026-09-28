@@ -1,0 +1,101 @@
+import type { Monster, MonsterCreateInput, MonsterUpdateInput } from './types'
+
+// All requests use same-origin relative paths. In dev, Vite's proxy
+// (configured in vite.config.ts) forwards /api and /uploads to the backend.
+// In Docker/prod a reverse proxy is expected to do the same. NEVER hardcode
+// a backend origin/host/port here.
+const API_BASE = '/api/v1'
+
+export class ApiError extends Error {
+  status: number
+  detail: string
+
+  constructor(status: number, detail: string) {
+    super(detail)
+    this.status = status
+    this.detail = detail
+  }
+}
+
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(`${API_BASE}${path}`, {
+    headers:
+      init && init.body && !(init.body instanceof FormData)
+        ? { 'Content-Type': 'application/json', ...(init.headers ?? {}) }
+        : init?.headers,
+    ...init,
+  })
+
+  if (!res.ok) {
+    let detail = res.statusText
+    try {
+      const body = (await res.json()) as { detail?: string }
+      if (body.detail) detail = body.detail
+    } catch {
+      // response had no JSON body
+    }
+    throw new ApiError(res.status, detail)
+  }
+
+  if (res.status === 204) {
+    return undefined as T
+  }
+
+  return (await res.json()) as T
+}
+
+export function getMonsters(): Promise<Monster[]> {
+  return request<Monster[]>('/monsters')
+}
+
+export function getMonster(id: number): Promise<Monster> {
+  return request<Monster>(`/monsters/${id}`)
+}
+
+export function createMonster(input: MonsterCreateInput): Promise<Monster> {
+  return request<Monster>('/monsters', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  })
+}
+
+export function updateMonster(
+  id: number,
+  input: MonsterUpdateInput,
+): Promise<Monster> {
+  return request<Monster>(`/monsters/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(input),
+  })
+}
+
+export function updateMonsterRank(
+  id: number,
+  rank_position: number,
+): Promise<Monster> {
+  return request<Monster>(`/monsters/${id}/rank`, {
+    method: 'PUT',
+    body: JSON.stringify({ rank_position }),
+  })
+}
+
+export function deleteMonster(id: number): Promise<void> {
+  return request<void>(`/monsters/${id}`, { method: 'DELETE' })
+}
+
+export function uploadMonsterImage(
+  id: number,
+  file: File,
+): Promise<Monster> {
+  const form = new FormData()
+  form.append('file', file)
+  return request<Monster>(`/monsters/${id}/image`, {
+    method: 'POST',
+    body: form,
+  })
+}
+
+/** Build a browsable URL for a monster's uploaded image (same-origin, proxied). */
+export function monsterImageUrl(imagePath: string): string {
+  return `/uploads/${imagePath}`
+}

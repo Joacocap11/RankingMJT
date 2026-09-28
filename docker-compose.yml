@@ -1,0 +1,53 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-rankingmjt}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme_local_only}
+      POSTGRES_DB: ${POSTGRES_DB:-rankingmjt}
+    ports:
+      # Bound to localhost only; not exposed on the LAN.
+      - "127.0.0.1:${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-rankingmjt} -d ${POSTGRES_DB:-rankingmjt}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: ./backend
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://rankingmjt:changeme_local_only@db:5432/rankingmjt}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3003}
+      UPLOAD_MAX_MB: ${UPLOAD_MAX_MB:-5}
+      UPLOAD_DIR: /app/uploads
+    ports:
+      - "${API_PORT:-8003}:8000"
+    volumes:
+      - ./backend:/app
+      - /app/.venv
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+    restart: unless-stopped
+    environment:
+      VITE_PROXY_TARGET: ${VITE_PROXY_TARGET:-http://api:8000}
+    ports:
+      - "${WEB_PORT:-3003}:3003"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - api
+
+volumes:
+  pgdata:
