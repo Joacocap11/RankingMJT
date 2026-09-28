@@ -62,7 +62,10 @@ export default function RankingLayout() {
   return (
     <div className="page">
       <header className="page-header">
-        <h1>Ranking Monsters</h1>
+        <div className="brand">
+          <img src="/logo.png" alt="RankingMJT" className="brand-logo" />
+          <h1>Ranking Monsters</h1>
+        </div>
         <button type="button" onClick={() => setFormState({ mode: 'create' })}>
           + Añadir Monster
         </button>

@@ -25,6 +25,16 @@ export function MonsterCard({ monster, onPress, onDelete }: MonsterCardProps) {
       <View style={styles.info}>
         <Text style={styles.nickname}>{monster.nickname}</Text>
         <Text style={styles.flavor}>{monster.flavor}</Text>
+        <View
+          style={[
+            styles.badge,
+            monster.would_buy_again ? styles.badgeBuyAgain : styles.badgeNoBuyAgain,
+          ]}
+        >
+          <Text style={styles.badgeText}>
+            {monster.would_buy_again ? 'Compraría de nuevo' : 'No compraría'}
+          </Text>
+        </View>
       </View>
       <Pressable
         style={styles.deleteButton}
@@ -59,8 +69,8 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   image: {
-    width: 48,
-    height: 48,
+    width: 64,
+    height: 64,
     borderRadius: 8,
     backgroundColor: '#2c2c2e',
   },
@@ -85,10 +95,28 @@ const styles = StyleSheet.create({
     color: '#aeaeb2',
     marginTop: 2,
   },
+  badge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    marginTop: 6,
+  },
+  badgeBuyAgain: {
+    backgroundColor: '#1f4d2e',
+  },
+  badgeNoBuyAgain: {
+    backgroundColor: '#5a1f24',
+  },
+  badgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#fff',
+  },
   deleteButton: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#2c2c2e',

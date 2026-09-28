@@ -28,6 +28,18 @@ body {
   padding: 1rem 0;
 }
 
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.brand-logo {
+  height: 44px;
+  width: 44px;
+  object-fit: contain;
+}
+
 .page-header h1 {
   margin: 0;
   font-size: 1.75rem;

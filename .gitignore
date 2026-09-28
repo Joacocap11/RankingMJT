@@ -39,6 +39,8 @@ pnpm-debug.log*
 *.jks
 *.p8
 *.mobileprovision
+*.apk
+*.aab
 *.orig.*
 mobile/.env
 mobile/.env.*

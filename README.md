@@ -261,11 +261,49 @@ Responsive.
 
 ## Mobile
 
-Misma lógica de ranking, mismas dos secciones, mismo endpoint. Pantallas de
-listado, alta y edición con Expo Router. Config de host vía
-`EXPO_PUBLIC_API_BASE_URL` (nunca hardcodeado en el código fuente) — ver
-[`mobile/.env.example`](mobile/.env.example) para las variantes de
-emulador/dispositivo físico.
+Expo SDK 57 + Expo Router + TypeScript estricto. Misma lógica de ranking que
+la web, mismo endpoint (`/monsters`, sin recalcular posiciones en el
+cliente): sección COMPRARÍA / NO COMPRARÍA, `#posición` grande, imagen,
+nickname, flavor y badge de estado. Permite ver, crear, editar (nickname,
+flavor, posición, `would_buy_again`, notas, foto) y borrar (con
+confirmación), con pull-to-refresh y estados de carga/vacío/error.
+
+- App: `RankingMJT` · slug `rankingmjt` · Android package
+  `com.rankingmjt.mobile` · versión `1.0.1` (`versionCode` 1).
+- Config de host vía **`EXPO_PUBLIC_API_BASE_URL`** (nunca hardcodeado en el
+  código fuente) — ver [`mobile/.env.example`](mobile/.env.example) para las
+  variantes de simulador/emulador Android/dispositivo físico en LAN. Las
+  imágenes (`/uploads/...`) se resuelven contra el origin derivado de esa
+  misma variable (sin duplicar ni hardcodear otra URL).
+
+### Correr mobile en dev
+
+```bash
+cd mobile
+cp .env.example .env   # ajustar EXPO_PUBLIC_API_BASE_URL según tu entorno
+npm install
+npx expo start
+```
+
+### Generar un APK (EAS Build)
+
+El proyecto está vinculado a EAS (`mobile/eas.json`, sin URLs ni secretos
+versionados). El perfil `preview` genera un **APK instalable** (no AAB, no se
+publica a ninguna store):
+
+```bash
+cd mobile
+npx eas-cli whoami                 # confirmar sesión
+npx eas-cli build --platform android --profile preview
+```
+
+La URL de API que usa ese build **no vive en el repo**: se define como
+variable de entorno de EAS (`eas env:set preview --name
+EXPO_PUBLIC_API_BASE_URL --value <url> --visibility plaintext`), separada
+por entorno (`development` / `preview` / `production`) igual que el resto de
+la config sensible/no versionada del proyecto.
+
+No se hace EAS Update/OTA ni publicación a Play Store en esta fase.
 
 ## Producción
 
@@ -363,4 +401,5 @@ secretos/patrones sensibles.
 - [ ] Navegación por categorías (Monsters / Alfajores / Cervezas / ...) en vez de una sola pantalla fija.
 - [x] Deploy en homelab (Proxmox/CT) para uso propio en LAN.
 - [ ] Reverse proxy (nginx) — implementado en producción para servir el frontend y proxyear `/api/v1` y `/uploads` al backend; pendiente evaluar TLS/otra capa de protección antes de exponer fuera de la LAN.
-- [ ] Mobile: EAS Update / build de APK / My Apps (no incluido en esta fase).
+- [x] Mobile: build APK (EAS, perfil `preview`) y publicación en el portal interno "Mis Apps" (LAN).
+- [ ] Mobile: EAS Update/OTA y publicación en Play Store (fuera de alcance).
