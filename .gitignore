@@ -19,6 +19,9 @@ id_ed25519*
 *.ssh/
 EXPO_TOKEN
 .npmrc
+# Exception: mobile/.npmrc contains no secrets (legacy-peer-deps=true only),
+# needed by EAS Build for consistent npm ci dependency resolution.
+!mobile/.npmrc
 .pypirc
 
 # --- Node ---
