@@ -99,3 +99,10 @@ export function uploadMonsterImage(
 export function monsterImageUrl(imagePath: string): string {
   return `/uploads/${imagePath}`
 }
+
+/** Thumbnail for list/grid display; falls back to the original when a row
+ * predates the thumbnail feature (thumbnail_path not yet backfilled). */
+export function monsterThumbnailUrl(monster: Pick<Monster, 'image_path' | 'thumbnail_path'>): string | null {
+  const path = monster.thumbnail_path ?? monster.image_path
+  return path ? monsterImageUrl(path) : null
+}

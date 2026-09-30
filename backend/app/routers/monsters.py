@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.config import get_settings
 from app.database import get_db
 from app.models import Monster
+from app.image_processing import delete_monster_images, generate_thumbnail, thumbnail_relative_path
 from app.ranking import RankingError, delete_monster, insert_monster, move_monster
 from app.schemas import MonsterCreate, MonsterOut, MonsterRankUpdate, MonsterUpdate
 
@@ -97,8 +98,12 @@ def update_monster_rank(monster_id: int, payload: MonsterRankUpdate, db: Session
 @router.delete("/{monster_id}", status_code=status.HTTP_204_NO_CONTENT)
 def remove_monster(monster_id: int, db: Session = Depends(get_db)) -> None:
     monster = _get_monster_or_404(db, monster_id)
+    settings = get_settings()
+    old_image_path = monster.image_path
+    old_thumbnail_path = monster.thumbnail_path
     delete_monster(db, monster)
     db.commit()
+    delete_monster_images(Path(settings.UPLOAD_DIR), old_image_path, old_thumbnail_path)
 
 
 @router.post("/{monster_id}/image", response_model=MonsterOut)
@@ -132,7 +137,27 @@ async def upload_monster_image(
     dest_path = monsters_dir / filename
     dest_path.write_bytes(contents)
 
-    monster.image_path = f"monsters/{filename}"
+    image_relative_path = f"monsters/{filename}"
+    thumbnail_relative = thumbnail_relative_path(image_relative_path)
+    thumbnail_dest = Path(settings.UPLOAD_DIR) / thumbnail_relative
+    try:
+        generate_thumbnail(dest_path, thumbnail_dest)
+    except Exception as exc:  # noqa: BLE001 - Pillow raises varied decode errors
+        dest_path.unlink(missing_ok=True)
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Uploaded file is not a valid/readable image.",
+        ) from exc
+
+    old_image_path = monster.image_path
+    old_thumbnail_path = monster.thumbnail_path
+
+    monster.image_path = image_relative_path
+    monster.thumbnail_path = thumbnail_relative
     db.commit()
     db.refresh(monster)
+
+    if old_image_path and old_image_path != monster.image_path:
+        delete_monster_images(Path(settings.UPLOAD_DIR), old_image_path, old_thumbnail_path)
+
     return monster

@@ -32,5 +32,6 @@ class MonsterOut(MonsterBase):
     id: int
     rank_position: int
     image_path: str | None = None
+    thumbnail_path: str | None = None
     created_at: datetime
     updated_at: datetime

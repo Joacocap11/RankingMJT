@@ -7,4 +7,5 @@ pydantic>=2
 pydantic-settings
 python-multipart
 pytest
+Pillow>=10
 httpx

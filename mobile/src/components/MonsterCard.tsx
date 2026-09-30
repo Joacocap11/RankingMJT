@@ -1,22 +1,42 @@
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image } from 'expo-image';
+import { memo } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { imageUrl } from '../api/client';
+import { thumbnailUrl } from '../api/client';
 import type { Monster } from '../api/types';
 
 interface MonsterCardProps {
   monster: Monster;
-  onPress: () => void;
-  onDelete: () => void;
+  onPress: (id: number) => void;
+  onImagePress: (id: number) => void;
+  onDelete: (id: number) => void;
 }
 
-export function MonsterCard({ monster, onPress, onDelete }: MonsterCardProps) {
-  const uri = imageUrl(monster.image_path);
+/** Memoized: with stable `onPress`/`onImagePress`/`onDelete` (see index.tsx),
+ * a row only re-renders when its own `monster` object actually changes,
+ * instead of on every list re-render (refresh toggles, unrelated state). */
+function MonsterCardComponent({ monster, onPress, onImagePress, onDelete }: MonsterCardProps) {
+  const uri = thumbnailUrl(monster);
 
   return (
-    <Pressable style={styles.card} onPress={onPress}>
+    <Pressable style={styles.card} onPress={() => onPress(monster.id)}>
       <Text style={styles.position}>#{monster.rank_position}</Text>
       {uri ? (
-        <Image source={{ uri }} style={styles.image} resizeMode="cover" />
+        <Pressable
+          onPress={(event) => {
+            event.stopPropagation();
+            onImagePress(monster.id);
+          }}
+          hitSlop={4}
+        >
+          <Image
+            source={{ uri }}
+            style={styles.image}
+            contentFit="cover"
+            transition={150}
+            cachePolicy="memory-disk"
+          />
+        </Pressable>
       ) : (
         <View style={[styles.image, styles.imagePlaceholder]}>
           <Text style={styles.imagePlaceholderText}>?</Text>
@@ -40,7 +60,7 @@ export function MonsterCard({ monster, onPress, onDelete }: MonsterCardProps) {
         style={styles.deleteButton}
         onPress={(event) => {
           event.stopPropagation();
-          onDelete();
+          onDelete(monster.id);
         }}
         hitSlop={8}
       >
@@ -49,6 +69,8 @@ export function MonsterCard({ monster, onPress, onDelete }: MonsterCardProps) {
     </Pressable>
   );
 }
+
+export const MonsterCard = memo(MonsterCardComponent);
 
 const styles = StyleSheet.create({
   card: {

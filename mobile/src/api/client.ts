@@ -17,6 +17,12 @@ export function imageUrl(imagePath: string | null): string | null {
   return `${API_ORIGIN}/uploads/${imagePath}`;
 }
 
+/** Thumbnail for list cards; falls back to the original for rows that
+ * predate the thumbnail feature (thumbnail_path not yet backfilled). */
+export function thumbnailUrl(monster: Pick<Monster, 'image_path' | 'thumbnail_path'>): string | null {
+  return imageUrl(monster.thumbnail_path ?? monster.image_path);
+}
+
 class ApiError extends Error {
   constructor(
     message: string,

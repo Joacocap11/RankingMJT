@@ -20,6 +20,7 @@ class Monster(Base):
     rank_position: Mapped[int] = mapped_column(Integer, nullable=False)
     would_buy_again: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default="1")
     image_path: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    thumbnail_path: Mapped[str | None] = mapped_column(String(512), nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(

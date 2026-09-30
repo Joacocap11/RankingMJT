@@ -5,6 +5,7 @@ export interface Monster {
   rank_position: number
   would_buy_again: boolean
   image_path: string | null
+  thumbnail_path: string | null
   notes: string | null
   created_at: string
   updated_at: string

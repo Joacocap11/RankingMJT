@@ -1,5 +1,7 @@
+import { useState } from 'react'
 import type { Monster } from './types'
-import { monsterImageUrl } from './api'
+import { monsterImageUrl, monsterThumbnailUrl } from './api'
+import ImageLightbox from './ImageLightbox'
 
 interface MonsterCardProps {
   monster: Monster
@@ -8,19 +10,37 @@ interface MonsterCardProps {
 }
 
 export default function MonsterCard({ monster, onEdit, onDelete }: MonsterCardProps) {
+  const [viewerOpen, setViewerOpen] = useState(false)
+  const thumbnailUrl = monsterThumbnailUrl(monster)
+
   return (
     <article className="monster-card">
       <div className="monster-card-rank">#{monster.rank_position}</div>
 
       <div className="monster-card-image">
-        {monster.image_path ? (
-          <img src={monsterImageUrl(monster.image_path)} alt={monster.nickname} />
+        {thumbnailUrl ? (
+          <button
+            type="button"
+            className="monster-card-image-button"
+            onClick={() => setViewerOpen(true)}
+            aria-label={`Ver imagen ampliada de ${monster.nickname}`}
+          >
+            <img src={thumbnailUrl} alt={monster.nickname} loading="lazy" />
+          </button>
         ) : (
           <div className="monster-card-image-placeholder" aria-label="Sin foto">
             🥫
           </div>
         )}
       </div>
+
+      {viewerOpen && monster.image_path && (
+        <ImageLightbox
+          src={monsterImageUrl(monster.image_path)}
+          alt={monster.nickname}
+          onClose={() => setViewerOpen(false)}
+        />
+      )}
 
       <div className="monster-card-body">
         <h3>{monster.nickname}</h3>

@@ -1,5 +1,5 @@
 import { Link, router, useFocusEffect } from 'expo-router';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -11,8 +11,9 @@ import {
   View,
 } from 'react-native';
 
-import { ApiError, api } from '../src/api/client';
+import { ApiError, api, imageUrl } from '../src/api/client';
 import type { Monster } from '../src/api/types';
+import { ImageViewerModal } from '../src/components/ImageViewerModal';
 import { MonsterCard } from '../src/components/MonsterCard';
 
 interface Section {
@@ -24,6 +25,15 @@ export default function RankingScreen() {
   const [monsters, setMonsters] = useState<Monster[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [viewerUri, setViewerUri] = useState<string | null>(null);
+
+  // Looked up by id inside stable callbacks below, so those callbacks never
+  // need `monsters` as a dependency (which would otherwise recreate them,
+  // and every MonsterCard prop with them, on every fetch).
+  const monstersRef = useRef<Monster[]>([]);
+  useEffect(() => {
+    monstersRef.current = monsters ?? [];
+  }, [monsters]);
 
   const loadMonsters = useCallback(async () => {
     try {
@@ -47,7 +57,19 @@ export default function RankingScreen() {
     setRefreshing(false);
   }
 
-  function confirmDelete(monster: Monster) {
+  const handleOpenEdit = useCallback((id: number) => {
+    router.push(`/edit/${id}`);
+  }, []);
+
+  const handleImagePress = useCallback((id: number) => {
+    const monster = monstersRef.current.find((m) => m.id === id);
+    const uri = monster ? imageUrl(monster.image_path) : null;
+    if (uri) setViewerUri(uri);
+  }, []);
+
+  const handleDeletePress = useCallback((id: number) => {
+    const monster = monstersRef.current.find((m) => m.id === id);
+    if (!monster) return;
     Alert.alert(
       'Eliminar Monster',
       `¿Eliminar "${monster.nickname} - ${monster.flavor}" del ranking?`,
@@ -70,7 +92,19 @@ export default function RankingScreen() {
         },
       ],
     );
-  }
+  }, [loadMonsters]);
+
+  const renderItem = useCallback(
+    ({ item }: { item: Monster }) => (
+      <MonsterCard
+        monster={item}
+        onPress={handleOpenEdit}
+        onImagePress={handleImagePress}
+        onDelete={handleDeletePress}
+      />
+    ),
+    [handleOpenEdit, handleImagePress, handleDeletePress],
+  );
 
   const sections = useMemo<Section[]>(() => {
     if (!monsters) return [];
@@ -113,25 +147,37 @@ export default function RankingScreen() {
             {section.title} ({section.data.length})
           </Text>
         )}
-        renderItem={({ item }) => (
-          <MonsterCard
-            monster={item}
-            onPress={() => router.push(`/edit/${item.id}`)}
-            onDelete={() => confirmDelete(item)}
-          />
-        )}
+        renderItem={renderItem}
         ListEmptyComponent={
           <Text style={styles.emptyText}>Todavía no hay Monsters en el ranking.</Text>
         }
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor="#fff" />
         }
+        // Rows are ~84dp tall; a typical phone viewport shows ~7-8 of them.
+        // initialNumToRender covers one screen without mounting/decoding the
+        // full ~20-item dataset up front (the original source of the mobile
+        // jank: all images downloading/decoding simultaneously on mount).
+        initialNumToRender={8}
+        // Small batches keep each render pass cheap while scrolling instead
+        // of decoding a big chunk of images in one frame.
+        maxToRenderPerBatch={6}
+        updateCellsBatchingPeriod={50}
+        // Default windowSize (21 viewport-heights) keeps nearly the whole
+        // 20-item list mounted at once for this dataset; 5 bounds how much
+        // off-screen content (and how many decoded images) stay resident.
+        windowSize={5}
+        // Android-only: unmounts native views that scroll off-screen,
+        // freeing decoded bitmap memory. Safe here: rows have no absolute-
+        // positioned overlays that depend on staying mounted.
+        removeClippedSubviews
       />
       <Link href="/create" asChild>
         <Pressable style={styles.fab}>
           <Text style={styles.fabText}>+</Text>
         </Pressable>
       </Link>
+      <ImageViewerModal uri={viewerUri} onClose={() => setViewerUri(null)} />
     </View>
   );
 }
