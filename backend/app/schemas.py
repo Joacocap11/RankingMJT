@@ -35,3 +35,37 @@ class MonsterOut(MonsterBase):
     thumbnail_path: str | None = None
     created_at: datetime
     updated_at: datetime
+
+
+class BeerBase(BaseModel):
+    brand: str
+    name: str
+    would_buy_again: bool = True
+    notes: str | None = None
+
+
+class BeerCreate(BeerBase):
+    rank_position: int
+
+
+class BeerUpdate(BaseModel):
+    brand: str | None = None
+    name: str | None = None
+    rank_position: int | None = None
+    would_buy_again: bool | None = None
+    notes: str | None = None
+
+
+class BeerRankUpdate(BaseModel):
+    rank_position: int
+
+
+class BeerOut(BeerBase):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    rank_position: int
+    image_path: str | None = None
+    thumbnail_path: str | None = None
+    created_at: datetime
+    updated_at: datetime
