@@ -1,9 +1,9 @@
 # RankingMJT
 
-Aplicación personal para rankear cosas. La primera feature/módulo es **Monsters**
-(latas de Monster Energy), pero el producto (`RankingMJT`) no está acoplado a esa
-categoría: en el futuro se podrán agregar otras (Alfajores, Cervezas, etc.) sin
-rediseñar la arquitectura de base.
+Aplicación personal para rankear cosas. Implementa dos rankings propios:
+**Monsters** (latas de Monster Energy) y **Cervezas**. El producto
+(`RankingMJT`) no está acoplado a ninguna categoría puntual: agregar un
+nuevo ranking (ej. Alfajores) no requiere rediseñar la arquitectura de base.
 
 > ⚠️ **Seguridad**: esta versión **no implementa autenticación/login**. La API
 > queda abierta dentro del entorno de desarrollo/LAN. **No debe exponerse
@@ -141,10 +141,32 @@ updated_at        datetime
 `would_buy_again` solo agrupa visualmente COMPRARÍA / NO COMPRARÍA dentro de
 un único ranking global — nunca recalcula la posición.
 
+## Modelo de datos: Beer
+
+```
+id                int, PK
+brand             str        — marca (ej. "Corona", "Patagonia", "Stella Artois")
+name              str        — nombre/variante/producto (ej. "Extra", "Amber Lager")
+rank_position     int        — posición GLOBAL y única en SU PROPIO ranking (1..N)
+would_buy_again   bool       — agrupación visual (Compraría / No compraría)
+image_path        str | null — ruta relativa dentro de uploads/ (ej. "beers/<uuid>.jpg")
+thumbnail_path    str | null — ruta relativa del thumbnail (ej. "beers/thumbs/<uuid>.webp")
+notes             str | null — aclaraciones libres
+created_at        datetime
+updated_at        datetime
+```
+
+Mismo modelo conceptual que Monster, ranking totalmente independiente (un
+`rank_position` propio, sin relación con el de Monsters). Sin seed de datos
+ficticios: arranca en 0 cervezas hasta que el usuario cargue las suyas.
+
 ## Lógica de ranking
 
-Hay un solo ranking global de `1..N` sin huecos ni duplicados, garantizado por
-una constraint `UNIQUE(rank_position)` a nivel de base de datos más lógica de
+Compartida entre Monster y Beer (`backend/app/ranking.py`, funciones
+genéricas `insert_entity` / `move_entity` / `delete_entity` parametrizadas
+por modelo SQLAlchemy). Cada entidad tiene su **propio** ranking global de
+`1..N` sin huecos ni duplicados, garantizado por una constraint
+`UNIQUE(rank_position)` a nivel de base de datos más la lógica de
 reordenamiento en el backend (nunca en el frontend).
 
 - **Crear** en posición `P` (rango válido `1..N+1`): las filas con
@@ -178,6 +200,13 @@ depender de comportamiento específico de un motor.
 | PUT    | `/monsters/{id}/rank`           | Atajo explícito solo para mover de posición |
 | DELETE | `/monsters/{id}`               | Eliminar (reordena el resto) |
 | POST   | `/monsters/{id}/image`          | Subir foto principal (`multipart/form-data`, campo `file`) |
+| GET    | `/beers`                      | Lista completa, ordenada por `rank_position` ASC |
+| GET    | `/beers/{id}`                 | Detalle |
+| POST   | `/beers`                      | Crear (dispara reordenamiento) |
+| PUT    | `/beers/{id}`                 | Editar campos; si cambia `rank_position`, reordena |
+| PUT    | `/beers/{id}/rank`            | Atajo explícito solo para mover de posición |
+| DELETE | `/beers/{id}`                 | Eliminar (reordena el resto) |
+| POST   | `/beers/{id}/image`           | Subir foto principal (`multipart/form-data`, campo `file`) |
 
 Las imágenes se sirven como archivos estáticos en `/uploads/<image_path>`. No
 se guardan blobs en Postgres. Se valida tipo de archivo
@@ -205,7 +234,10 @@ Decisiones sobre datos ambiguos:
 ## Migraciones (Alembic)
 
 Migración inicial `0001_monsters` crea la tabla `monsters` con la constraint
-`UNIQUE(rank_position)`. Ver detalle de upgrade/downgrade en
+`UNIQUE(rank_position)`. `0002_monster_thumbnail_path` agrega
+`thumbnail_path` a Monster. `0003_beers` crea la tabla `beers` (mismo patrón:
+PK, `UNIQUE(rank_position)` propio, `image_path`/`thumbnail_path` desde el
+inicio). Ver detalle de upgrade/downgrade en
 [`backend/alembic/README.md`](backend/alembic/README.md).
 
 ```bash
@@ -222,13 +254,18 @@ docker compose exec api alembic current
 docker compose exec api pytest -q
 ```
 
-14 tests cubren los casos A–N pedidos: alta en posición 1, inserción que
-desplaza todo hacia abajo, inserción intermedia, inserción al final, mover
-arriba/abajo, mover a la misma posición (no-op), borrar reordena, posiciones
-inválidas rechazadas (422), no hay duplicados tras secuencias mixtas de
-operaciones, `GET` siempre ordenado, actualizar `would_buy_again` nunca mueve
-la posición, el seed crea exactamente 20 filas, y el seed es idempotente.
-**Resultado verificado: 14 passed, 0 failed.**
+25 tests cubren Monster (casos A–N originales: alta en posición 1,
+inserción que desplaza todo hacia abajo, inserción intermedia, inserción al
+final, mover arriba/abajo, mover a la misma posición no-op, borrar reordena,
+posiciones inválidas rechazadas con 422, no hay duplicados tras secuencias
+mixtas de operaciones, `GET` siempre ordenado, actualizar `would_buy_again`
+nunca mueve la posición, upload/thumbnail/replace/delete de imágenes, y el
+seed de 20 filas es idempotente) + **19 tests cubren Beer**
+(`test_beer_ranking.py`, `test_beer_images.py`), mismos casos adaptados a
+`brand`/`name`, ejercitando el mismo servicio de ranking genérico
+(`app/ranking.py`) y la misma lógica de imágenes/thumbnails.
+**Resultado verificado: 44 passed, 0 failed** (incluye los tests de Monster
+sin modificar — regresión confirmada).
 
 ### Frontend
 
@@ -253,23 +290,32 @@ No se genera APK ni se corre EAS/OTA en esta fase.
 
 ## Frontend web
 
-Página principal "Ranking Monsters": dos secciones (COMPRARÍA / NO COMPRARÍA)
-con la posición global bien visible (`#N` grande), imagen, nickname, flavor,
-badge y acciones Editar/Eliminar. Formulario de alta/edición reutilizado,
-avisa explícitamente cuando la posición elegida va a desplazar al resto.
-Responsive.
+Navegación por pestañas (`RankingMJT | Monsters | Cervezas`, `react-router-dom`)
+entre `/monsters` y `/beers`; `/` redirige a `/monsters`. Cada ranking:
+dos secciones (COMPRARÍA / NO COMPRARÍA) con la posición global bien visible
+(`#N` grande), imagen, campos propios (nickname/flavor para Monster,
+brand/name para Beer), badge y acciones Editar/Eliminar. Formulario de
+alta/edición reutilizado, avisa explícitamente cuando la posición elegida va
+a desplazar al resto. Responsive. `ImageLightbox` se reutiliza sin cambios
+entre ambos rankings.
 
 ## Mobile
 
-Expo SDK 57 + Expo Router + TypeScript estricto. Misma lógica de ranking que
-la web, mismo endpoint (`/monsters`, sin recalcular posiciones en el
-cliente): sección COMPRARÍA / NO COMPRARÍA, `#posición` grande, imagen,
-nickname, flavor y badge de estado. Permite ver, crear, editar (nickname,
-flavor, posición, `would_buy_again`, notas, foto) y borrar (con
-confirmación), con pull-to-refresh y estados de carga/vacío/error.
+Expo SDK 57 + Expo Router + TypeScript estricto. Dos rankings (Monsters en
+`/`, Cervezas en `/beers`), cada uno con su propia pantalla
+listado/crear/editar y el mismo endpoint propio (`/monsters` o `/beers`, sin
+recalcular posiciones en el cliente). Un `RankingSwitcher` (segmented
+control) en la cabecera de cada listado permite saltar entre ambos sin
+saturar el bottom tab bar — preparado para sumar Alfajores agregando una
+entrada más al arreglo de tabs. Cada ranking: sección COMPRARÍA / NO
+COMPRARÍA, `#posición` grande, imagen, campos propios y badge de estado.
+Permite ver, crear, editar (campos propios, posición, `would_buy_again`,
+notas, foto) y borrar (con confirmación), con pull-to-refresh y estados de
+carga/vacío/error. `ImageViewerModal` se reutiliza sin cambios entre ambos
+rankings.
 
 - App: `RankingMJT` · slug `rankingmjt` · Android package
-  `com.rankingmjt.mobile` · versión `1.0.1` (`versionCode` 1).
+  `com.rankingmjt.mobile` · versión `1.0.3` (`versionCode` 3).
 - Config de host vía **`EXPO_PUBLIC_API_BASE_URL`** (nunca hardcodeado en el
   código fuente) — ver [`mobile/.env.example`](mobile/.env.example) para las
   variantes de simulador/emulador Android/dispositivo físico en LAN. Las
@@ -405,9 +451,9 @@ secretos/patrones sensibles.
 
 - [ ] Autenticación (cuando la app deje de ser solo local/LAN).
 - [ ] Nueva sección: **Alfajores**.
-- [ ] Nueva sección: **Cervezas**.
+- [x] Nueva sección: **Cervezas**.
 - [ ] Generalizar el concepto de "ranking" a más categorías si hace falta.
-- [ ] Navegación por categorías (Monsters / Alfajores / Cervezas / ...) en vez de una sola pantalla fija.
+- [x] Navegación por categorías (Monsters / Cervezas) en vez de una sola pantalla fija — preparada para sumar Alfajores sin rediseño.
 - [x] Deploy en homelab (Proxmox/CT) para uso propio en LAN.
 - [ ] Reverse proxy (nginx) — implementado en producción para servir el frontend y proxyear `/api/v1` y `/uploads` al backend; pendiente evaluar TLS/otra capa de protección antes de exponer fuera de la LAN.
 - [x] Mobile: build APK (EAS, perfil `preview`) y publicación en el portal interno "Mis Apps" (LAN).
