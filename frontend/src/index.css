@@ -334,3 +334,39 @@ body {
     align-items: flex-start;
   }
 }
+
+.top-nav {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 0.75rem 1.25rem;
+  background: #171a21;
+  border-bottom: 1px solid #2a2f3a;
+}
+
+.top-nav-brand {
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.top-nav-tabs {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.top-nav-tab {
+  color: #f2f2f2;
+  text-decoration: none;
+  padding: 0.4rem 0.9rem;
+  border-radius: 999px;
+  border: 1px solid #3a3f4a;
+  opacity: 0.75;
+}
+
+.top-nav-tab.active {
+  background: #22c55e;
+  color: #0f1115;
+  border-color: transparent;
+  opacity: 1;
+  font-weight: 600;
+}

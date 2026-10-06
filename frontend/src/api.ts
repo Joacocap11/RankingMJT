@@ -1,4 +1,11 @@
-import type { Monster, MonsterCreateInput, MonsterUpdateInput } from './types'
+import type {
+  Beer,
+  BeerCreateInput,
+  BeerUpdateInput,
+  Monster,
+  MonsterCreateInput,
+  MonsterUpdateInput,
+} from './types'
 
 // All requests use same-origin relative paths. In dev, Vite's proxy
 // (configured in vite.config.ts) forwards /api and /uploads to the backend.
@@ -105,4 +112,58 @@ export function monsterImageUrl(imagePath: string): string {
 export function monsterThumbnailUrl(monster: Pick<Monster, 'image_path' | 'thumbnail_path'>): string | null {
   const path = monster.thumbnail_path ?? monster.image_path
   return path ? monsterImageUrl(path) : null
+}
+
+export function getBeers(): Promise<Beer[]> {
+  return request<Beer[]>('/beers')
+}
+
+export function getBeer(id: number): Promise<Beer> {
+  return request<Beer>(`/beers/${id}`)
+}
+
+export function createBeer(input: BeerCreateInput): Promise<Beer> {
+  return request<Beer>('/beers', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  })
+}
+
+export function updateBeer(id: number, input: BeerUpdateInput): Promise<Beer> {
+  return request<Beer>(`/beers/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(input),
+  })
+}
+
+export function updateBeerRank(id: number, rank_position: number): Promise<Beer> {
+  return request<Beer>(`/beers/${id}/rank`, {
+    method: 'PUT',
+    body: JSON.stringify({ rank_position }),
+  })
+}
+
+export function deleteBeer(id: number): Promise<void> {
+  return request<void>(`/beers/${id}`, { method: 'DELETE' })
+}
+
+export function uploadBeerImage(id: number, file: File): Promise<Beer> {
+  const form = new FormData()
+  form.append('file', file)
+  return request<Beer>(`/beers/${id}/image`, {
+    method: 'POST',
+    body: form,
+  })
+}
+
+/** Build a browsable URL for a beer's uploaded image (same-origin, proxied). */
+export function beerImageUrl(imagePath: string): string {
+  return `/uploads/${imagePath}`
+}
+
+/** Thumbnail for list/grid display; falls back to the original when a row
+ * predates the thumbnail feature (thumbnail_path not yet backfilled). */
+export function beerThumbnailUrl(beer: Pick<Beer, 'image_path' | 'thumbnail_path'>): string | null {
+  const path = beer.thumbnail_path ?? beer.image_path
+  return path ? beerImageUrl(path) : null
 }
