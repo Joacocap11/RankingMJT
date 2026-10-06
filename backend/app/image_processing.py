@@ -59,7 +59,7 @@ def _resolve_within_upload_dir(upload_dir: Path, relative_path: str) -> Path | N
     return candidate
 
 
-def delete_monster_images(upload_dir: Path, image_path: str | None, thumbnail_path: str | None) -> None:
+def delete_uploaded_images(upload_dir: Path, image_path: str | None, thumbnail_path: str | None) -> None:
     """Best-effort delete of an original + thumbnail, confined to ``upload_dir``.
 
     Silently ignores missing files; never raises, never touches paths outside

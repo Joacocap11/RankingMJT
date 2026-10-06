@@ -6,7 +6,7 @@ from PIL import Image
 
 from app.config import Settings
 from app.generate_thumbnails import backfill
-from app.image_processing import delete_monster_images, thumbnail_relative_path
+from app.image_processing import delete_uploaded_images, thumbnail_relative_path
 from app.models import Monster
 
 API = "/api/v1/monsters"
@@ -135,13 +135,13 @@ def test_g_delete_cleans_files(client: TestClient, patched_upload_dir):
     assert not thumbnail.exists()
 
 
-def test_delete_monster_images_refuses_path_traversal(tmp_path):
+def test_delete_uploaded_images_refuses_path_traversal(tmp_path):
     upload_dir = tmp_path / "uploads"
     upload_dir.mkdir()
     outside_file = tmp_path / "outside.txt"
     outside_file.write_text("do not delete me")
 
-    delete_monster_images(upload_dir, "../outside.txt", None)
+    delete_uploaded_images(upload_dir, "../outside.txt", None)
 
     assert outside_file.exists()
 

@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from app.config import get_settings
 from app.database import get_db
 from app.models import Monster
-from app.image_processing import delete_monster_images, generate_thumbnail, thumbnail_relative_path
+from app.image_processing import delete_uploaded_images, generate_thumbnail, thumbnail_relative_path
 from app.ranking import RankingError, delete_monster, insert_monster, move_monster
 from app.schemas import MonsterCreate, MonsterOut, MonsterRankUpdate, MonsterUpdate
 
@@ -103,7 +103,7 @@ def remove_monster(monster_id: int, db: Session = Depends(get_db)) -> None:
     old_thumbnail_path = monster.thumbnail_path
     delete_monster(db, monster)
     db.commit()
-    delete_monster_images(Path(settings.UPLOAD_DIR), old_image_path, old_thumbnail_path)
+    delete_uploaded_images(Path(settings.UPLOAD_DIR), old_image_path, old_thumbnail_path)
 
 
 @router.post("/{monster_id}/image", response_model=MonsterOut)
@@ -158,6 +158,6 @@ async def upload_monster_image(
     db.refresh(monster)
 
     if old_image_path and old_image_path != monster.image_path:
-        delete_monster_images(Path(settings.UPLOAD_DIR), old_image_path, old_thumbnail_path)
+        delete_uploaded_images(Path(settings.UPLOAD_DIR), old_image_path, old_thumbnail_path)
 
     return monster

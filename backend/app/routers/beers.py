@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from app.config import get_settings
 from app.database import get_db
 from app.models import Beer
-from app.image_processing import delete_monster_images, generate_thumbnail, thumbnail_relative_path
+from app.image_processing import delete_uploaded_images, generate_thumbnail, thumbnail_relative_path
 from app.ranking import RankingError, delete_entity, insert_entity, move_entity
 from app.schemas import BeerCreate, BeerOut, BeerRankUpdate, BeerUpdate
 
@@ -103,7 +103,7 @@ def remove_beer(beer_id: int, db: Session = Depends(get_db)) -> None:
     old_thumbnail_path = beer.thumbnail_path
     delete_entity(db, Beer, beer)
     db.commit()
-    delete_monster_images(Path(settings.UPLOAD_DIR), old_image_path, old_thumbnail_path)
+    delete_uploaded_images(Path(settings.UPLOAD_DIR), old_image_path, old_thumbnail_path)
 
 
 @router.post("/{beer_id}/image", response_model=BeerOut)
@@ -158,6 +158,6 @@ async def upload_beer_image(
     db.refresh(beer)
 
     if old_image_path and old_image_path != beer.image_path:
-        delete_monster_images(Path(settings.UPLOAD_DIR), old_image_path, old_thumbnail_path)
+        delete_uploaded_images(Path(settings.UPLOAD_DIR), old_image_path, old_thumbnail_path)
 
     return beer
