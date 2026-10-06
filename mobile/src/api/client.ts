@@ -1,4 +1,12 @@
-import type { Monster, MonsterCreateInput, MonsterUpdateInput, PickedImage } from './types';
+import type {
+  Beer,
+  BeerCreateInput,
+  BeerUpdateInput,
+  Monster,
+  MonsterCreateInput,
+  MonsterUpdateInput,
+  PickedImage,
+} from './types';
 
 // EXPO_PUBLIC_* vars are inlined at build/start time by Expo's env support.
 // The `http://localhost:8003/api/v1` fallback is a dev-only convenience for
@@ -18,9 +26,11 @@ export function imageUrl(imagePath: string | null): string | null {
 }
 
 /** Thumbnail for list cards; falls back to the original for rows that
- * predate the thumbnail feature (thumbnail_path not yet backfilled). */
-export function thumbnailUrl(monster: Pick<Monster, 'image_path' | 'thumbnail_path'>): string | null {
-  return imageUrl(monster.thumbnail_path ?? monster.image_path);
+ * predate the thumbnail feature (thumbnail_path not yet backfilled). Shared
+ * shape works for Monster, Beer, and any future ranked entity with the same
+ * image/thumbnail columns. */
+export function thumbnailUrl(entity: { image_path: string | null; thumbnail_path: string | null }): string | null {
+  return imageUrl(entity.thumbnail_path ?? entity.image_path);
 }
 
 class ApiError extends Error {
@@ -98,6 +108,44 @@ export const api = {
       type: file.type,
     } as unknown as Blob);
     return request<Monster>(`/monsters/${id}/image`, {
+      method: 'POST',
+      body: form,
+    });
+  },
+
+  listBeers: () => request<Beer[]>('/beers'),
+
+  getBeer: (id: number) => request<Beer>(`/beers/${id}`),
+
+  createBeer: (input: BeerCreateInput) =>
+    request<Beer>('/beers', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
+
+  updateBeer: (id: number, input: BeerUpdateInput) =>
+    request<Beer>(`/beers/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(input),
+    }),
+
+  updateBeerRank: (id: number, rankPosition: number) =>
+    request<Beer>(`/beers/${id}/rank`, {
+      method: 'PUT',
+      body: JSON.stringify({ rank_position: rankPosition }),
+    }),
+
+  deleteBeer: (id: number) =>
+    request<void>(`/beers/${id}`, { method: 'DELETE' }),
+
+  uploadBeerImage: (id: number, file: PickedImage) => {
+    const form = new FormData();
+    form.append('file', {
+      uri: file.uri,
+      name: file.name,
+      type: file.type,
+    } as unknown as Blob);
+    return request<Beer>(`/beers/${id}/image`, {
       method: 'POST',
       body: form,
     });

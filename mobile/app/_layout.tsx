@@ -15,6 +15,9 @@ export default function RootLayout() {
         <Stack.Screen name="index" options={{ title: 'Ranking Monsters' }} />
         <Stack.Screen name="create" options={{ title: 'Nueva Monster', presentation: 'modal' }} />
         <Stack.Screen name="edit/[id]" options={{ title: 'Editar Monster', presentation: 'modal' }} />
+        <Stack.Screen name="beers/index" options={{ title: 'Ranking Cervezas' }} />
+        <Stack.Screen name="beers/create" options={{ title: 'Nueva Cerveza', presentation: 'modal' }} />
+        <Stack.Screen name="beers/edit/[id]" options={{ title: 'Editar Cerveza', presentation: 'modal' }} />
       </Stack>
     </>
   );
