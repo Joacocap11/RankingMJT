@@ -65,3 +65,34 @@ export interface PickedImage {
   name: string;
   type: string;
 }
+
+// Mirrors the backend AlfajorOut contract (see backend API docs, /api/v1/alfajores).
+export interface Alfajor {
+  id: number;
+  brand: string;
+  name: string;
+  rank_position: number;
+  would_buy_again: boolean;
+  image_path: string | null;
+  thumbnail_path: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AlfajorCreateInput {
+  brand: string;
+  name: string;
+  rank_position: number;
+  would_buy_again?: boolean;
+  notes?: string | null;
+}
+
+// All fields optional/partial, matching PUT /alfajores/{id} semantics.
+export interface AlfajorUpdateInput {
+  brand?: string;
+  name?: string;
+  rank_position?: number;
+  would_buy_again?: boolean;
+  notes?: string | null;
+}

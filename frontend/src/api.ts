@@ -1,4 +1,7 @@
 import type {
+  Alfajor,
+  AlfajorCreateInput,
+  AlfajorUpdateInput,
   Beer,
   BeerCreateInput,
   BeerUpdateInput,
@@ -166,4 +169,58 @@ export function beerImageUrl(imagePath: string): string {
 export function beerThumbnailUrl(beer: Pick<Beer, 'image_path' | 'thumbnail_path'>): string | null {
   const path = beer.thumbnail_path ?? beer.image_path
   return path ? beerImageUrl(path) : null
+}
+
+export function getAlfajores(): Promise<Alfajor[]> {
+  return request<Alfajor[]>('/alfajores')
+}
+
+export function getAlfajor(id: number): Promise<Alfajor> {
+  return request<Alfajor>(`/alfajores/${id}`)
+}
+
+export function createAlfajor(input: AlfajorCreateInput): Promise<Alfajor> {
+  return request<Alfajor>('/alfajores', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  })
+}
+
+export function updateAlfajor(id: number, input: AlfajorUpdateInput): Promise<Alfajor> {
+  return request<Alfajor>(`/alfajores/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(input),
+  })
+}
+
+export function updateAlfajorRank(id: number, rank_position: number): Promise<Alfajor> {
+  return request<Alfajor>(`/alfajores/${id}/rank`, {
+    method: 'PUT',
+    body: JSON.stringify({ rank_position }),
+  })
+}
+
+export function deleteAlfajor(id: number): Promise<void> {
+  return request<void>(`/alfajores/${id}`, { method: 'DELETE' })
+}
+
+export function uploadAlfajorImage(id: number, file: File): Promise<Alfajor> {
+  const form = new FormData()
+  form.append('file', file)
+  return request<Alfajor>(`/alfajores/${id}/image`, {
+    method: 'POST',
+    body: form,
+  })
+}
+
+/** Build a browsable URL for an alfajor's uploaded image (same-origin, proxied). */
+export function alfajorImageUrl(imagePath: string): string {
+  return `/uploads/${imagePath}`
+}
+
+/** Thumbnail for list/grid display; falls back to the original when a row
+ * predates the thumbnail feature (thumbnail_path not yet backfilled). */
+export function alfajorThumbnailUrl(alfajor: Pick<Alfajor, 'image_path' | 'thumbnail_path'>): string | null {
+  const path = alfajor.thumbnail_path ?? alfajor.image_path
+  return path ? alfajorImageUrl(path) : null
 }

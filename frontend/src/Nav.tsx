@@ -19,6 +19,12 @@ export default function Nav() {
         >
           Cervezas
         </NavLink>
+        <NavLink
+          to="/alfajores"
+          className={({ isActive }) => `top-nav-tab${isActive ? ' active' : ''}`}
+        >
+          Alfajores
+        </NavLink>
       </div>
     </nav>
   )

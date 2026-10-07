@@ -7,6 +7,7 @@ from fastapi.staticfiles import StaticFiles
 from app.config import get_settings
 from app.routers.monsters import router as monsters_router
 from app.routers.beers import router as beers_router
+from app.routers.alfajores import router as alfajores_router
 
 settings = get_settings()
 
@@ -34,4 +35,5 @@ def health() -> dict[str, str]:
 
 v1_router.include_router(monsters_router)
 v1_router.include_router(beers_router)
+v1_router.include_router(alfajores_router)
 app.include_router(v1_router)

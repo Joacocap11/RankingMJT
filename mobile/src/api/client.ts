@@ -1,4 +1,7 @@
 import type {
+  Alfajor,
+  AlfajorCreateInput,
+  AlfajorUpdateInput,
   Beer,
   BeerCreateInput,
   BeerUpdateInput,
@@ -146,6 +149,44 @@ export const api = {
       type: file.type,
     } as unknown as Blob);
     return request<Beer>(`/beers/${id}/image`, {
+      method: 'POST',
+      body: form,
+    });
+  },
+
+  listAlfajores: () => request<Alfajor[]>('/alfajores'),
+
+  getAlfajor: (id: number) => request<Alfajor>(`/alfajores/${id}`),
+
+  createAlfajor: (input: AlfajorCreateInput) =>
+    request<Alfajor>('/alfajores', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
+
+  updateAlfajor: (id: number, input: AlfajorUpdateInput) =>
+    request<Alfajor>(`/alfajores/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(input),
+    }),
+
+  updateAlfajorRank: (id: number, rankPosition: number) =>
+    request<Alfajor>(`/alfajores/${id}/rank`, {
+      method: 'PUT',
+      body: JSON.stringify({ rank_position: rankPosition }),
+    }),
+
+  deleteAlfajor: (id: number) =>
+    request<void>(`/alfajores/${id}`, { method: 'DELETE' }),
+
+  uploadAlfajorImage: (id: number, file: PickedImage) => {
+    const form = new FormData();
+    form.append('file', {
+      uri: file.uri,
+      name: file.name,
+      type: file.type,
+    } as unknown as Blob);
+    return request<Alfajor>(`/alfajores/${id}/image`, {
       method: 'POST',
       body: form,
     });
