@@ -1,9 +1,9 @@
 # RankingMJT
 
-Aplicación personal para rankear cosas. Implementa dos rankings propios:
-**Monsters** (latas de Monster Energy) y **Cervezas**. El producto
-(`RankingMJT`) no está acoplado a ninguna categoría puntual: agregar un
-nuevo ranking (ej. Alfajores) no requiere rediseñar la arquitectura de base.
+Aplicación personal para rankear cosas. Implementa tres rankings propios:
+**Monsters** (latas de Monster Energy), **Cervezas** y **Alfajores**. El
+producto (`RankingMJT`) no está acoplado a ninguna categoría puntual:
+agregar un nuevo ranking no requiere rediseñar la arquitectura de base.
 
 > ⚠️ **Seguridad**: esta versión **no implementa autenticación/login**. La API
 > queda abierta dentro del entorno de desarrollo/LAN. **No debe exponerse
@@ -160,9 +160,30 @@ Mismo modelo conceptual que Monster, ranking totalmente independiente (un
 `rank_position` propio, sin relación con el de Monsters). Sin seed de datos
 ficticios: arranca en 0 cervezas hasta que el usuario cargue las suyas.
 
+## Modelo de datos: Alfajor
+
+```
+id                int, PK
+brand             str        — marca (ej. "Portezuelo", "Havanna")
+name              str        — nombre/producto/variante (ej. "Black", "70% Cacao")
+rank_position     int        — posición GLOBAL y única en SU PROPIO ranking (1..N)
+would_buy_again   bool       — agrupación visual (Compraría / No compraría)
+image_path        str | null — ruta relativa dentro de uploads/ (ej. "alfajores/<uuid>.jpg")
+thumbnail_path    str | null — ruta relativa del thumbnail (ej. "alfajores/thumbs/<uuid>.webp")
+notes             str | null — aclaraciones libres
+created_at        datetime
+updated_at        datetime
+```
+
+Mismo modelo conceptual que Monster/Beer, ranking totalmente independiente.
+Deliberadamente simple: sin relleno, chocolate, país, peso ni puntuación
+numérica — eso queda para una iteración futura si hace falta. Sin seed de
+datos ficticios: arranca en 0 alfajores hasta que el usuario cargue los
+suyos.
+
 ## Lógica de ranking
 
-Compartida entre Monster y Beer (`backend/app/ranking.py`, funciones
+Compartida entre Monster, Beer y Alfajor (`backend/app/ranking.py`, funciones
 genéricas `insert_entity` / `move_entity` / `delete_entity` parametrizadas
 por modelo SQLAlchemy). Cada entidad tiene su **propio** ranking global de
 `1..N` sin huecos ni duplicados, garantizado por una constraint
@@ -207,6 +228,13 @@ depender de comportamiento específico de un motor.
 | PUT    | `/beers/{id}/rank`            | Atajo explícito solo para mover de posición |
 | DELETE | `/beers/{id}`                 | Eliminar (reordena el resto) |
 | POST   | `/beers/{id}/image`           | Subir foto principal (`multipart/form-data`, campo `file`) |
+| GET    | `/alfajores`                  | Lista completa, ordenada por `rank_position` ASC |
+| GET    | `/alfajores/{id}`             | Detalle |
+| POST   | `/alfajores`                  | Crear (dispara reordenamiento) |
+| PUT    | `/alfajores/{id}`             | Editar campos; si cambia `rank_position`, reordena |
+| PUT    | `/alfajores/{id}/rank`        | Atajo explícito solo para mover de posición |
+| DELETE | `/alfajores/{id}`             | Eliminar (reordena el resto) |
+| POST   | `/alfajores/{id}/image`       | Subir foto principal (`multipart/form-data`, campo `file`) |
 
 Las imágenes se sirven como archivos estáticos en `/uploads/<image_path>`. No
 se guardan blobs en Postgres. Se valida tipo de archivo
@@ -237,7 +265,8 @@ Migración inicial `0001_monsters` crea la tabla `monsters` con la constraint
 `UNIQUE(rank_position)`. `0002_monster_thumbnail_path` agrega
 `thumbnail_path` a Monster. `0003_beers` crea la tabla `beers` (mismo patrón:
 PK, `UNIQUE(rank_position)` propio, `image_path`/`thumbnail_path` desde el
-inicio). Ver detalle de upgrade/downgrade en
+inicio). `0004_alfajores` crea la tabla `alfajores` (mismo patrón). Ver
+detalle de upgrade/downgrade en
 [`backend/alembic/README.md`](backend/alembic/README.md).
 
 ```bash
@@ -261,11 +290,12 @@ posiciones inválidas rechazadas con 422, no hay duplicados tras secuencias
 mixtas de operaciones, `GET` siempre ordenado, actualizar `would_buy_again`
 nunca mueve la posición, upload/thumbnail/replace/delete de imágenes, y el
 seed de 20 filas es idempotente) + **19 tests cubren Beer**
-(`test_beer_ranking.py`, `test_beer_images.py`), mismos casos adaptados a
-`brand`/`name`, ejercitando el mismo servicio de ranking genérico
-(`app/ranking.py`) y la misma lógica de imágenes/thumbnails.
-**Resultado verificado: 44 passed, 0 failed** (incluye los tests de Monster
-sin modificar — regresión confirmada).
+(`test_beer_ranking.py`, `test_beer_images.py`) + **19 tests cubren
+Alfajor** (`test_alfajor_ranking.py`, `test_alfajor_images.py`), mismos
+casos adaptados a `brand`/`name`, ejercitando el mismo servicio de ranking
+genérico (`app/ranking.py`) y la misma lógica de imágenes/thumbnails.
+**Resultado verificado: 63 passed, 0 failed** (incluye los tests de
+Monster y Beer sin modificar — regresión confirmada).
 
 ### Frontend
 
@@ -281,41 +311,46 @@ npm run build      # build de producción exitoso
 
 ```bash
 cd mobile
+npm ci
 npx tsc --noEmit    # limpio
 npx expo lint       # limpio
 npx expo-doctor     # 21/21 checks OK
 ```
 
-No se genera APK ni se corre EAS/OTA en esta fase.
+No se genera APK en esta fase. Se agregó `expo-updates` (OTA) y se validó
+la configuración (`npx expo config --type public`); no se publicó ningún
+update (`eas update`) ni se corrió ningún build EAS.
 
 ## Frontend web
 
-Navegación por pestañas (`RankingMJT | Monsters | Cervezas`, `react-router-dom`)
-entre `/monsters` y `/beers`; `/` redirige a `/monsters`. Cada ranking:
-dos secciones (COMPRARÍA / NO COMPRARÍA) con la posición global bien visible
-(`#N` grande), imagen, campos propios (nickname/flavor para Monster,
-brand/name para Beer), badge y acciones Editar/Eliminar. Formulario de
-alta/edición reutilizado, avisa explícitamente cuando la posición elegida va
-a desplazar al resto. Responsive. `ImageLightbox` se reutiliza sin cambios
-entre ambos rankings.
+Navegación por pestañas (`RankingMJT | Monsters | Cervezas | Alfajores`,
+`react-router-dom`) entre `/monsters`, `/beers` y `/alfajores`; `/` redirige
+a `/monsters`. Cada ranking: dos secciones (COMPRARÍA / NO COMPRARÍA) con la
+posición global bien visible (`#N` grande), imagen, campos propios
+(nickname/flavor para Monster, brand/name para Beer y Alfajor), badge y
+acciones Editar/Eliminar. Formulario de alta/edición reutilizado, avisa
+explícitamente cuando la posición elegida va a desplazar al resto.
+Responsive. `ImageLightbox` se reutiliza sin cambios entre los tres
+rankings.
 
 ## Mobile
 
-Expo SDK 57 + Expo Router + TypeScript estricto. Dos rankings (Monsters en
-`/`, Cervezas en `/beers`), cada uno con su propia pantalla
-listado/crear/editar y el mismo endpoint propio (`/monsters` o `/beers`, sin
-recalcular posiciones en el cliente). Un `RankingSwitcher` (segmented
-control) en la cabecera de cada listado permite saltar entre ambos sin
-saturar el bottom tab bar — preparado para sumar Alfajores agregando una
-entrada más al arreglo de tabs. Cada ranking: sección COMPRARÍA / NO
-COMPRARÍA, `#posición` grande, imagen, campos propios y badge de estado.
-Permite ver, crear, editar (campos propios, posición, `would_buy_again`,
-notas, foto) y borrar (con confirmación), con pull-to-refresh y estados de
-carga/vacío/error. `ImageViewerModal` se reutiliza sin cambios entre ambos
-rankings.
+Expo SDK 57 + Expo Router + TypeScript estricto. Tres rankings (Monsters en
+`/`, Cervezas en `/beers`, Alfajores en `/alfajores`), cada uno con su
+propia pantalla listado/crear/editar y el mismo endpoint propio
+(`/monsters`, `/beers` o `/alfajores`, sin recalcular posiciones en el
+cliente). Un `RankingSwitcher` (segmented control, tabs con `flex: 1` para
+repartir el ancho equitativamente) en la cabecera de cada listado permite
+saltar entre los tres sin saturar el bottom tab bar — preparado para sumar
+un cuarto ranking agregando una entrada más al arreglo de tabs, sin rehacer
+el layout. Cada ranking: sección COMPRARÍA / NO COMPRARÍA, `#posición`
+grande, imagen, campos propios y badge de estado. Permite ver, crear,
+editar (campos propios, posición, `would_buy_again`, notas, foto) y borrar
+(con confirmación), con pull-to-refresh y estados de carga/vacío/error.
+`ImageViewerModal` se reutiliza sin cambios entre los tres rankings.
 
 - App: `RankingMJT` · slug `rankingmjt` · Android package
-  `com.rankingmjt.mobile` · versión `1.0.3` (`versionCode` 3).
+  `com.rankingmjt.mobile` · versión `1.1.0` (`versionCode` 5).
 - Config de host vía **`EXPO_PUBLIC_API_BASE_URL`** (nunca hardcodeado en el
   código fuente) — ver [`mobile/.env.example`](mobile/.env.example) para las
   variantes de simulador/emulador Android/dispositivo físico en LAN. Las
@@ -349,8 +384,6 @@ EXPO_PUBLIC_API_BASE_URL --value <url> --visibility plaintext`), separada
 por entorno (`development` / `preview` / `production`) igual que el resto de
 la config sensible/no versionada del proyecto.
 
-No se hace EAS Update/OTA ni publicación a Play Store en esta fase.
-
 **HTTP cleartext en Android**: la API de RankingMJT se consume por `http://`
 dentro de la LAN doméstica (sin TLS todavía). Android bloquea tráfico
 cleartext por defecto para apps que targetean API 28+. Se habilitó
@@ -359,6 +392,53 @@ explícitamente vía `expo-build-properties`
 tocar código nativo a mano) — resulta en `android:usesCleartextTraffic="true"`
 en el manifest final. Cuando el backend migre a HTTPS, esta excepción debería
 poder eliminarse.
+
+### Actualizaciones mobile (EAS Update / OTA)
+
+La app usa el mismo concepto de actualización que el resto de las apps
+personales del usuario: **una APK base instalada una sola vez**, y después
+los cambios de JS/TS/assets se distribuyen por **EAS Update (OTA)** sin
+pedirle al usuario que instale una APK nueva.
+
+- Librería: `expo-updates` (config plugin automático, sin entrada manual en
+  `plugins` — `runtimeVersion` + `updates.url` en `app.json` son
+  suficientes).
+- `runtimeVersion`: política `{ "policy": "appVersion" }` — el runtime es el
+  valor de `"version"` en `app.json`. Mismo criterio que el resto de los
+  proyectos: cualquier cambio que requiera una APK nueva (dependencia
+  nativa, SDK de Expo, permisos) debe venir acompañado de un bump de
+  `"version"`.
+- `updates.url`: `https://u.expo.dev/<projectId>` (el mismo `projectId` ya
+  vinculado del proyecto EAS).
+- Branch/channel de producción: `production` (`mobile/eas.json`, perfil
+  `build.production.channel = "production"`). También se agregaron
+  `channel: "preview"` y `channel: "development"` a sus perfiles
+  correspondientes, sin romper el perfil `preview` existente.
+- Comportamiento (defaults de `expo-updates`, sin código custom): al abrir
+  la app, `checkAutomatically: "ON_LOAD"` (default) consulta el update del
+  channel asociado al build; si hay uno compatible con el `runtimeVersion`
+  actual, lo descarga en segundo plano; la sesión en curso sigue con el JS
+  ya cargado; **la próxima vez que se abra la app**, ya corre la versión
+  nueva. No hace falta UI de "hay una actualización disponible": el
+  comportamiento default ya cumple el objetivo (abrir → chequear/descargar →
+  próxima apertura → versión nueva).
+- Publicar una OTA (fuera de alcance de esta fase, documentado para cuando
+  se decida hacerlo):
+  ```bash
+  cd mobile
+  eas update --branch production --clear-cache
+  ```
+  El flag `--clear-cache` evita el problema histórico de bundle de Metro
+  quedando stale; siempre verificar el bundle resultante antes de
+  considerar la publicación terminada.
+- **Cuándo hace falta una APK nueva en vez de OTA**: cambios en
+  dependencias nativas, upgrade del SDK de Expo, nuevos permisos de
+  Android, configuración nativa incompatible, o cualquier cambio que
+  requiera modificar `runtimeVersion`. Todo lo demás (JS/TS, estilos,
+  assets compatibles, lógica de frontend) va por OTA.
+- No se generó ninguna APK ni se publicó ningún `eas update` en esta fase —
+  solo se agregó y configuró `expo-updates`, validado con `npx expo config
+  --type public` (ver sección de Tests).
 
 ## Producción
 
@@ -450,11 +530,11 @@ secretos/patrones sensibles.
 ## Roadmap
 
 - [ ] Autenticación (cuando la app deje de ser solo local/LAN).
-- [ ] Nueva sección: **Alfajores**.
+- [x] Nueva sección: **Alfajores**.
 - [x] Nueva sección: **Cervezas**.
 - [ ] Generalizar el concepto de "ranking" a más categorías si hace falta.
-- [x] Navegación por categorías (Monsters / Cervezas) en vez de una sola pantalla fija — preparada para sumar Alfajores sin rediseño.
+- [x] Navegación por categorías (Monsters / Cervezas / Alfajores) en vez de una sola pantalla fija — preparada para sumar un cuarto ranking sin rediseño.
 - [x] Deploy en homelab (Proxmox/CT) para uso propio en LAN.
 - [ ] Reverse proxy (nginx) — implementado en producción para servir el frontend y proxyear `/api/v1` y `/uploads` al backend; pendiente evaluar TLS/otra capa de protección antes de exponer fuera de la LAN.
 - [x] Mobile: build APK (EAS, perfil `preview`) y publicación en el portal interno "Mis Apps" (LAN).
-- [ ] Mobile: EAS Update/OTA y publicación en Play Store (fuera de alcance).
+- [x] Mobile: EAS Update/OTA configurado (`expo-updates`, `runtimeVersion` por `appVersion`, channel/branch `production`); publicación OTA real y Play Store quedan fuera de alcance de esta fase.
