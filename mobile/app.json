@@ -3,16 +3,22 @@
     "name": "RankingMJT",
     "slug": "rankingmjt",
     "scheme": "rankingmjt",
-    "version": "1.0.4",
+    "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/be3d6513-d718-42e3-903c-df07cbb6a96a"
+    },
     "ios": {
       "supportsTablet": true
     },
     "android": {
       "package": "com.rankingmjt.mobile",
-      "versionCode": 4,
+      "versionCode": 5,
       "adaptiveIcon": {
         "backgroundColor": "#0b0b0c",
         "foregroundImage": "./assets/android-icon-foreground.png"
