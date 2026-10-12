@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 
 import { imageUrl } from '../api/client';
+import { RatingControl } from './RatingControl';
 import type { PickedImage } from '../api/types';
 
 export interface BeerFormValues {
@@ -20,6 +21,7 @@ export interface BeerFormValues {
   name: string;
   rankPosition: string;
   wouldBuyAgain: boolean;
+  rating: number | null;
   notes: string;
 }
 
@@ -44,6 +46,7 @@ export function BeerForm({
   const [name, setName] = useState(initialValues.name);
   const [rankPosition, setRankPosition] = useState(initialValues.rankPosition);
   const [wouldBuyAgain, setWouldBuyAgain] = useState(initialValues.wouldBuyAgain);
+  const [rating, setRating] = useState(initialValues.rating);
   const [notes, setNotes] = useState(initialValues.notes);
   const [pickedImage, setPickedImage] = useState<PickedImage | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -98,6 +101,7 @@ export function BeerForm({
         name: name.trim(),
         rankPosition: String(parsedRank),
         wouldBuyAgain,
+        rating,
         notes,
       },
       pickedImage,
@@ -138,6 +142,8 @@ export function BeerForm({
         <Text style={styles.label}>¿La comprarías de nuevo?</Text>
         <Switch value={wouldBuyAgain} onValueChange={setWouldBuyAgain} />
       </View>
+
+      <RatingControl value={rating} onChange={setRating} />
 
       <Text style={styles.label}>Notas</Text>
       <TextInput

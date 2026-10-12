@@ -3,6 +3,7 @@ import { memo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { thumbnailUrl } from '../api/client';
+import { formatRating } from '../rating';
 import type { Beer } from '../api/types';
 
 interface BeerCardProps {
@@ -45,6 +46,7 @@ function BeerCardComponent({ beer, onPress, onImagePress, onDelete }: BeerCardPr
       <View style={styles.info}>
         <Text style={styles.nickname}>{beer.brand}</Text>
         <Text style={styles.flavor}>{beer.name}</Text>
+        <Text style={styles.rating}>Puntuación: {formatRating(beer.rating)}</Text>
         <View
           style={[
             styles.badge,
@@ -116,6 +118,11 @@ const styles = StyleSheet.create({
     color: '#aeaeb2',
     fontSize: 13,
     marginTop: 1,
+  },
+  rating: {
+    fontSize: 12,
+    color: '#8e8e93',
+    marginTop: 4,
   },
   badge: {
     alignSelf: 'flex-start',

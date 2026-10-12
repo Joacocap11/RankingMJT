@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { Beer } from './types'
 import { beerImageUrl, beerThumbnailUrl } from './api'
 import ImageLightbox from './ImageLightbox'
+import { formatRating } from './rating'
 
 interface BeerCardProps {
   beer: Beer
@@ -45,6 +46,9 @@ export default function BeerCard({ beer, onEdit, onDelete }: BeerCardProps) {
       <div className="monster-card-body">
         <h3>{beer.brand}</h3>
         <p className="monster-card-flavor">{beer.name}</p>
+        <p className="monster-card-rating">
+          Puntuación: {formatRating(beer.rating)}
+        </p>
         <span
           className={
             beer.would_buy_again

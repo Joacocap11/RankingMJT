@@ -131,15 +131,38 @@ nickname          str        — nombre visual/personal de la lata (ej. "Negra")
 flavor            str        — sabor/nombre oficial (ej. "Aussie Lemonade")
 rank_position     int        — posición GLOBAL y única en el ranking (1..N)
 would_buy_again   bool       — agrupación visual (Compraría / No compraría)
+rating            numeric(3,1) | null — puntuación opcional 1.0–10.0, pasos de 0.5
 image_path        str | null — ruta relativa dentro de uploads/ (ej. "monsters/<uuid>.jpg")
 notes             str | null — aclaraciones libres (ej. "Guarina")
 created_at        datetime
 updated_at        datetime
 ```
 
-**No hay puntuación 1–10.** El ranking ES el orden (`rank_position`).
-`would_buy_again` solo agrupa visualmente COMPRARÍA / NO COMPRARÍA dentro de
-un único ranking global — nunca recalcula la posición.
+El ranking ES el orden manual (`rank_position`). `would_buy_again` solo
+agrupa visualmente COMPRARÍA / NO COMPRARÍA dentro de un único ranking
+global — nunca recalcula la posición.
+
+### Puntuación (`rating`) — Monsters, Cervezas y Alfajores
+
+Cada item puede tener: rank manual, **rating opcional 1.0–10.0 en pasos de
+0.5**, `would_buy_again`, imagen y notas.
+
+- `rating` es **solo una referencia subjetiva secundaria**. **NO determina
+  automáticamente el ranking**: cambiar el rating no cambia `rank_position`,
+  mover el rank no cambia el rating, y nada se ordena por rating.
+- `NULL` = *Sin puntuar* (valor por defecto; los registros existentes quedan
+  en `NULL`). Válidos: `NULL`, `1.0`, `1.5`, … `10.0`. Inválidos: `0`, `0.5`,
+  `10.5`, `7.3`, negativos, texto.
+- Validación en dos capas: schemas Pydantic (API, 422) y `CHECK` en la DB
+  (`ck_<tabla>_rating_half_steps`, migración `0005_ratings`). En `PUT`,
+  omitir `rating` lo deja igual y enviar `"rating": null` lo borra.
+- La API serializa `rating` como número JSON (`8.5`); la UI tolera además
+  el string `"8.5"` (`toRating`/`formatRating`).
+- Formato visual: `8.0/10`, `8.5/10`, `10.0/10`; sin rating: `Sin puntuar`.
+- UI: web `RatingInput` (frontend/src/RatingInput.tsx) y mobile
+  `RatingControl` — `[−] 8.5 / 10 [+]` + botón *Sin puntuar*; `+` desde
+  *Sin puntuar* arranca en 5.0. Helpers compartidos en `rating.ts`
+  (idéntico en `frontend/src` y `mobile/src`; mantener sincronizados).
 
 ## Modelo de datos: Beer
 
@@ -149,6 +172,7 @@ brand             str        — marca (ej. "Corona", "Patagonia", "Stella Artoi
 name              str        — nombre/variante/producto (ej. "Extra", "Amber Lager")
 rank_position     int        — posición GLOBAL y única en SU PROPIO ranking (1..N)
 would_buy_again   bool       — agrupación visual (Compraría / No compraría)
+rating            numeric(3,1) | null — puntuación opcional 1.0–10.0, pasos de 0.5
 image_path        str | null — ruta relativa dentro de uploads/ (ej. "beers/<uuid>.jpg")
 thumbnail_path    str | null — ruta relativa del thumbnail (ej. "beers/thumbs/<uuid>.webp")
 notes             str | null — aclaraciones libres
@@ -156,7 +180,7 @@ created_at        datetime
 updated_at        datetime
 ```
 
-Mismo modelo conceptual que Monster, ranking totalmente independiente (un
+Mismo modelo conceptual que Monster (incluido `rating` opcional), ranking totalmente independiente (un
 `rank_position` propio, sin relación con el de Monsters). Sin seed de datos
 ficticios: arranca en 0 cervezas hasta que el usuario cargue las suyas.
 
@@ -168,6 +192,7 @@ brand             str        — marca (ej. "Portezuelo", "Havanna")
 name              str        — nombre/producto/variante (ej. "Black", "70% Cacao")
 rank_position     int        — posición GLOBAL y única en SU PROPIO ranking (1..N)
 would_buy_again   bool       — agrupación visual (Compraría / No compraría)
+rating            numeric(3,1) | null — puntuación opcional 1.0–10.0, pasos de 0.5
 image_path        str | null — ruta relativa dentro de uploads/ (ej. "alfajores/<uuid>.jpg")
 thumbnail_path    str | null — ruta relativa del thumbnail (ej. "alfajores/thumbs/<uuid>.webp")
 notes             str | null — aclaraciones libres
@@ -176,8 +201,8 @@ updated_at        datetime
 ```
 
 Mismo modelo conceptual que Monster/Beer, ranking totalmente independiente.
-Deliberadamente simple: sin relleno, chocolate, país, peso ni puntuación
-numérica — eso queda para una iteración futura si hace falta. Sin seed de
+Deliberadamente simple: sin relleno, chocolate, país ni peso (solo el
+`rating` opcional 1–10) — eso queda para una iteración futura si hace falta. Sin seed de
 datos ficticios: arranca en 0 alfajores hasta que el usuario cargue los
 suyos.
 
@@ -265,7 +290,9 @@ Migración inicial `0001_monsters` crea la tabla `monsters` con la constraint
 `UNIQUE(rank_position)`. `0002_monster_thumbnail_path` agrega
 `thumbnail_path` a Monster. `0003_beers` crea la tabla `beers` (mismo patrón:
 PK, `UNIQUE(rank_position)` propio, `image_path`/`thumbnail_path` desde el
-inicio). `0004_alfajores` crea la tabla `alfajores` (mismo patrón). Ver
+inicio). `0004_alfajores` crea la tabla `alfajores` (mismo patrón). `0005_ratings`
+agrega `rating NUMERIC(3,1)` nullable + `CHECK` de pasos de 0.5 a `monsters`,
+`beers` y `alfajores` (sin tocar datos existentes). Ver
 detalle de upgrade/downgrade en
 [`backend/alembic/README.md`](backend/alembic/README.md).
 
@@ -294,8 +321,12 @@ seed de 20 filas es idempotente) + **19 tests cubren Beer**
 Alfajor** (`test_alfajor_ranking.py`, `test_alfajor_images.py`), mismos
 casos adaptados a `brand`/`name`, ejercitando el mismo servicio de ranking
 genérico (`app/ranking.py`) y la misma lógica de imágenes/thumbnails.
-**Resultado verificado: 63 passed, 0 failed** (incluye los tests de
-Monster y Beer sin modificar — regresión confirmada).
+`tests/test_ratings.py` cubre los 3 modelos (parametrizado): null/1/1.5/5/
+9.5/10 válidos; 0/0.5/10.5/6.2/negativos inválidos; rating no altera rank y
+viceversa; crear sin rating; `rating: null` limpia; el `CHECK` de la DB
+rechaza valores inválidos salteando la API.
+**Resultado verificado: 162 passed, 0 failed** (sin modificar los tests
+existentes — regresión confirmada).
 
 ### Frontend
 
@@ -305,6 +336,7 @@ npm install
 npx tsc --noEmit   # limpio
 npm run lint       # limpio, 0 errores/warnings
 npm run build      # build de producción exitoso
+npm test           # vitest: formatRating / toRating / stepRating
 ```
 
 ### Mobile
@@ -314,12 +346,29 @@ cd mobile
 npm ci
 npx tsc --noEmit    # limpio
 npx expo lint       # limpio
-npx expo-doctor     # 21/21 checks OK
+npx expo-doctor     # (ver nota: puede avisar desfasajes de parches de SDK)
 ```
 
 No se genera APK en esta fase. Se agregó `expo-updates` (OTA) y se validó
 la configuración (`npx expo config --type public`); no se publicó ningún
 update (`eas update`) ni se corrió ningún build EAS.
+
+## Plataformas: Web/PWA y Android
+
+- **Web/PWA**: plataforma principal de uso y validación actual (Safari en
+  iPhone / acceso directo a pantalla de inicio).
+- **Android**: mantenido y compatible (paridad de features), aunque sin
+  validación física del usuario por ahora.
+
+### Icono / PWA (web)
+
+`frontend/index.html` declara favicon (`favicon.ico` + `favicon.png`),
+`apple-touch-icon` (180×180), `manifest.webmanifest` (standalone, iconos
+192/512 + maskable 512) y `apple-mobile-web-app-title`. Todos derivan del
+logo oficial (`mobile/assets/icon.png`) sobre fondo `#0b0b0c`. Sin service
+worker. iOS cachea fuerte el icono de pantalla de inicio: para ver un icono
+nuevo hay que **borrar el acceso directo viejo**, cerrar Safari, reabrir la
+web y **Añadir a pantalla de inicio** de nuevo.
 
 ## Frontend web
 

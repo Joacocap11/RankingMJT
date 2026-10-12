@@ -5,6 +5,7 @@ import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'rea
 import { ApiError, api } from '../../src/api/client';
 import type { Monster, PickedImage } from '../../src/api/types';
 import { MonsterForm, type MonsterFormValues } from '../../src/components/MonsterForm';
+import { toRating } from '../../src/rating';
 
 export default function EditMonsterScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -37,6 +38,7 @@ export default function EditMonsterScreen() {
         flavor: values.flavor,
         rank_position: Number.parseInt(values.rankPosition, 10),
         would_buy_again: values.wouldBuyAgain,
+        rating: values.rating,
         notes: values.notes.trim().length > 0 ? values.notes.trim() : null,
       });
       if (pickedImage) {
@@ -100,6 +102,7 @@ export default function EditMonsterScreen() {
           flavor: monster.flavor,
           rankPosition: String(monster.rank_position),
           wouldBuyAgain: monster.would_buy_again,
+          rating: toRating(monster.rating),
           notes: monster.notes ?? '',
         }}
         maxRankPosition={totalCount}

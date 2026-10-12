@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { Monster } from './types'
 import { monsterImageUrl, monsterThumbnailUrl } from './api'
 import ImageLightbox from './ImageLightbox'
+import { formatRating } from './rating'
 
 interface MonsterCardProps {
   monster: Monster
@@ -45,6 +46,9 @@ export default function MonsterCard({ monster, onEdit, onDelete }: MonsterCardPr
       <div className="monster-card-body">
         <h3>{monster.nickname}</h3>
         <p className="monster-card-flavor">{monster.flavor}</p>
+        <p className="monster-card-rating">
+          Puntuación: {formatRating(monster.rating)}
+        </p>
         <span
           className={
             monster.would_buy_again

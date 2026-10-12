@@ -5,6 +5,7 @@ import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'rea
 import { ApiError, api } from '../../../src/api/client';
 import type { Alfajor, PickedImage } from '../../../src/api/types';
 import { AlfajorForm, type AlfajorFormValues } from '../../../src/components/AlfajorForm';
+import { toRating } from '../../../src/rating';
 
 export default function EditAlfajorScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -37,6 +38,7 @@ export default function EditAlfajorScreen() {
         name: values.name,
         rank_position: Number.parseInt(values.rankPosition, 10),
         would_buy_again: values.wouldBuyAgain,
+        rating: values.rating,
         notes: values.notes.trim().length > 0 ? values.notes.trim() : null,
       });
       if (pickedImage) {
@@ -100,6 +102,7 @@ export default function EditAlfajorScreen() {
           name: alfajor.name,
           rankPosition: String(alfajor.rank_position),
           wouldBuyAgain: alfajor.would_buy_again,
+          rating: toRating(alfajor.rating),
           notes: alfajor.notes ?? '',
         }}
         maxRankPosition={totalCount}

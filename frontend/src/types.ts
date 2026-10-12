@@ -4,6 +4,8 @@ export interface Monster {
   flavor: string
   rank_position: number
   would_buy_again: boolean
+  /** number from the API; may be a numeric string if a Decimal is serialized as text. Use toRating(). */
+  rating: number | string | null
   image_path: string | null
   thumbnail_path: string | null
   notes: string | null
@@ -17,6 +19,7 @@ export interface MonsterCreateInput {
   flavor: string
   rank_position: number
   would_buy_again: boolean
+  rating: number | null
   notes: string | null
 }
 
@@ -26,6 +29,8 @@ export interface MonsterUpdateInput {
   flavor?: string
   rank_position?: number
   would_buy_again?: boolean
+  /** null clears the rating; omit to leave it unchanged. */
+  rating?: number | null
   notes?: string | null
 }
 
@@ -35,6 +40,8 @@ export interface Beer {
   name: string
   rank_position: number
   would_buy_again: boolean
+  /** number from the API; may be a numeric string if a Decimal is serialized as text. Use toRating(). */
+  rating: number | string | null
   image_path: string | null
   thumbnail_path: string | null
   notes: string | null
@@ -48,6 +55,7 @@ export interface BeerCreateInput {
   name: string
   rank_position: number
   would_buy_again: boolean
+  rating: number | null
   notes: string | null
 }
 
@@ -57,6 +65,8 @@ export interface BeerUpdateInput {
   name?: string
   rank_position?: number
   would_buy_again?: boolean
+  /** null clears the rating; omit to leave it unchanged. */
+  rating?: number | null
   notes?: string | null
 }
 
@@ -66,6 +76,8 @@ export interface Alfajor {
   name: string
   rank_position: number
   would_buy_again: boolean
+  /** number from the API; may be a numeric string if a Decimal is serialized as text. Use toRating(). */
+  rating: number | string | null
   image_path: string | null
   thumbnail_path: string | null
   notes: string | null
@@ -79,6 +91,7 @@ export interface AlfajorCreateInput {
   name: string
   rank_position: number
   would_buy_again: boolean
+  rating: number | null
   notes: string | null
 }
 
@@ -88,5 +101,7 @@ export interface AlfajorUpdateInput {
   name?: string
   rank_position?: number
   would_buy_again?: boolean
+  /** null clears the rating; omit to leave it unchanged. */
+  rating?: number | null
   notes?: string | null
 }

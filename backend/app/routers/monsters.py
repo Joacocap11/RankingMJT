@@ -45,6 +45,7 @@ def create_monster(payload: MonsterCreate, db: Session = Depends(get_db)) -> Mon
         nickname=payload.nickname,
         flavor=payload.flavor,
         would_buy_again=payload.would_buy_again,
+        rating=payload.rating,
         notes=payload.notes,
     )
     try:
@@ -69,6 +70,8 @@ def update_monster(monster_id: int, payload: MonsterUpdate, db: Session = Depend
         monster.would_buy_again = payload.would_buy_again
     if payload.notes is not None:
         monster.notes = payload.notes
+    if "rating" in payload.model_fields_set:
+        monster.rating = payload.rating
 
     if payload.rank_position is not None and payload.rank_position != monster.rank_position:
         try:

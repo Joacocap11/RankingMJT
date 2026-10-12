@@ -3,6 +3,7 @@ import { memo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { thumbnailUrl } from '../api/client';
+import { formatRating } from '../rating';
 import type { Alfajor } from '../api/types';
 
 interface AlfajorCardProps {
@@ -45,6 +46,7 @@ function AlfajorCardComponent({ alfajor, onPress, onImagePress, onDelete }: Alfa
       <View style={styles.info}>
         <Text style={styles.nickname}>{alfajor.brand}</Text>
         <Text style={styles.flavor}>{alfajor.name}</Text>
+        <Text style={styles.rating}>Puntuación: {formatRating(alfajor.rating)}</Text>
         <View
           style={[
             styles.badge,
@@ -116,6 +118,11 @@ const styles = StyleSheet.create({
     color: '#aeaeb2',
     fontSize: 13,
     marginTop: 1,
+  },
+  rating: {
+    fontSize: 12,
+    color: '#8e8e93',
+    marginTop: 4,
   },
   badge: {
     alignSelf: 'flex-start',

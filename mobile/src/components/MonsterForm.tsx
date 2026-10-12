@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 
 import { imageUrl } from '../api/client';
+import { RatingControl } from './RatingControl';
 import type { PickedImage } from '../api/types';
 
 export interface MonsterFormValues {
@@ -20,6 +21,7 @@ export interface MonsterFormValues {
   flavor: string;
   rankPosition: string;
   wouldBuyAgain: boolean;
+  rating: number | null;
   notes: string;
 }
 
@@ -44,6 +46,7 @@ export function MonsterForm({
   const [flavor, setFlavor] = useState(initialValues.flavor);
   const [rankPosition, setRankPosition] = useState(initialValues.rankPosition);
   const [wouldBuyAgain, setWouldBuyAgain] = useState(initialValues.wouldBuyAgain);
+  const [rating, setRating] = useState(initialValues.rating);
   const [notes, setNotes] = useState(initialValues.notes);
   const [pickedImage, setPickedImage] = useState<PickedImage | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -98,6 +101,7 @@ export function MonsterForm({
         flavor: flavor.trim(),
         rankPosition: String(parsedRank),
         wouldBuyAgain,
+        rating,
         notes,
       },
       pickedImage,
@@ -138,6 +142,8 @@ export function MonsterForm({
         <Text style={styles.label}>La volvería a comprar</Text>
         <Switch value={wouldBuyAgain} onValueChange={setWouldBuyAgain} />
       </View>
+
+      <RatingControl value={rating} onChange={setRating} />
 
       <Text style={styles.label}>Notas</Text>
       <TextInput

@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { ApiError, createAlfajor, updateAlfajor, uploadAlfajorImage } from './api'
+import RatingInput from './RatingInput'
+import { toRating } from './rating'
 import type { Alfajor } from './types'
 
 interface AlfajorFormProps {
@@ -27,6 +29,7 @@ export default function AlfajorForm({
   const [wouldBuyAgain, setWouldBuyAgain] = useState(
     alfajor?.would_buy_again ?? true,
   )
+  const [rating, setRating] = useState<number | null>(toRating(alfajor?.rating))
   const [notes, setNotes] = useState(alfajor?.notes ?? '')
   const [file, setFile] = useState<File | null>(null)
   const [submitting, setSubmitting] = useState(false)
@@ -61,6 +64,7 @@ export default function AlfajorForm({
           name: name.trim(),
           rank_position: rankPosition,
           would_buy_again: wouldBuyAgain,
+          rating,
           notes: notes.trim().length > 0 ? notes.trim() : null,
         })
       } else {
@@ -70,6 +74,7 @@ export default function AlfajorForm({
           name: name.trim(),
           rank_position: rankPosition,
           would_buy_again: wouldBuyAgain,
+          rating,
           notes: notes.trim().length > 0 ? notes.trim() : null,
         })
       }
@@ -132,6 +137,8 @@ export default function AlfajorForm({
         />
         <span>¿Lo comprarías de nuevo?</span>
       </label>
+
+      <RatingInput value={rating} onChange={setRating} />
 
       <label className="field">
         <span>Notas</span>

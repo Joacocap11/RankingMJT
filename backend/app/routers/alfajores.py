@@ -45,6 +45,7 @@ def create_alfajor(payload: AlfajorCreate, db: Session = Depends(get_db)) -> Alf
         brand=payload.brand,
         name=payload.name,
         would_buy_again=payload.would_buy_again,
+        rating=payload.rating,
         notes=payload.notes,
     )
     try:
@@ -69,6 +70,8 @@ def update_alfajor(alfajor_id: int, payload: AlfajorUpdate, db: Session = Depend
         alfajor.would_buy_again = payload.would_buy_again
     if payload.notes is not None:
         alfajor.notes = payload.notes
+    if "rating" in payload.model_fields_set:
+        alfajor.rating = payload.rating
 
     if payload.rank_position is not None and payload.rank_position != alfajor.rank_position:
         try:

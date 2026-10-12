@@ -27,6 +27,7 @@ export default function CreateBeerScreen() {
         name: values.name,
         rank_position: Number.parseInt(values.rankPosition, 10),
         would_buy_again: values.wouldBuyAgain,
+        rating: values.rating,
         notes: values.notes.trim().length > 0 ? values.notes.trim() : null,
       });
       if (pickedImage) {
@@ -52,6 +53,7 @@ export default function CreateBeerScreen() {
           name: '',
           rankPosition: String(beerCount + 1),
           wouldBuyAgain: true,
+          rating: null,
           notes: '',
         }}
         maxRankPosition={beerCount + 1}

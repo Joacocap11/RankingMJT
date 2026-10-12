@@ -5,6 +5,7 @@ import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'rea
 import { ApiError, api } from '../../../src/api/client';
 import type { Beer, PickedImage } from '../../../src/api/types';
 import { BeerForm, type BeerFormValues } from '../../../src/components/BeerForm';
+import { toRating } from '../../../src/rating';
 
 export default function EditBeerScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -37,6 +38,7 @@ export default function EditBeerScreen() {
         name: values.name,
         rank_position: Number.parseInt(values.rankPosition, 10),
         would_buy_again: values.wouldBuyAgain,
+        rating: values.rating,
         notes: values.notes.trim().length > 0 ? values.notes.trim() : null,
       });
       if (pickedImage) {
@@ -100,6 +102,7 @@ export default function EditBeerScreen() {
           name: beer.name,
           rankPosition: String(beer.rank_position),
           wouldBuyAgain: beer.would_buy_again,
+          rating: toRating(beer.rating),
           notes: beer.notes ?? '',
         }}
         maxRankPosition={totalCount}

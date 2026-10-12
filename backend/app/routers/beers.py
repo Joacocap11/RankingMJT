@@ -45,6 +45,7 @@ def create_beer(payload: BeerCreate, db: Session = Depends(get_db)) -> Beer:
         brand=payload.brand,
         name=payload.name,
         would_buy_again=payload.would_buy_again,
+        rating=payload.rating,
         notes=payload.notes,
     )
     try:
@@ -69,6 +70,8 @@ def update_beer(beer_id: int, payload: BeerUpdate, db: Session = Depends(get_db)
         beer.would_buy_again = payload.would_buy_again
     if payload.notes is not None:
         beer.notes = payload.notes
+    if "rating" in payload.model_fields_set:
+        beer.rating = payload.rating
 
     if payload.rank_position is not None and payload.rank_position != beer.rank_position:
         try:

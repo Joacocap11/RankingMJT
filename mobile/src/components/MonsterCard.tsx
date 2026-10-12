@@ -3,6 +3,7 @@ import { memo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { thumbnailUrl } from '../api/client';
+import { formatRating } from '../rating';
 import type { Monster } from '../api/types';
 
 interface MonsterCardProps {
@@ -45,6 +46,7 @@ function MonsterCardComponent({ monster, onPress, onImagePress, onDelete }: Mons
       <View style={styles.info}>
         <Text style={styles.nickname}>{monster.nickname}</Text>
         <Text style={styles.flavor}>{monster.flavor}</Text>
+        <Text style={styles.rating}>Puntuación: {formatRating(monster.rating)}</Text>
         <View
           style={[
             styles.badge,
@@ -116,6 +118,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#aeaeb2',
     marginTop: 2,
+  },
+  rating: {
+    fontSize: 12,
+    color: '#8e8e93',
+    marginTop: 4,
   },
   badge: {
     alignSelf: 'flex-start',

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { Alfajor } from './types'
 import { alfajorImageUrl, alfajorThumbnailUrl } from './api'
 import ImageLightbox from './ImageLightbox'
+import { formatRating } from './rating'
 
 interface AlfajorCardProps {
   alfajor: Alfajor
@@ -45,6 +46,9 @@ export default function AlfajorCard({ alfajor, onEdit, onDelete }: AlfajorCardPr
       <div className="monster-card-body">
         <h3>{alfajor.brand}</h3>
         <p className="monster-card-flavor">{alfajor.name}</p>
+        <p className="monster-card-rating">
+          Puntuación: {formatRating(alfajor.rating)}
+        </p>
         <span
           className={
             alfajor.would_buy_again

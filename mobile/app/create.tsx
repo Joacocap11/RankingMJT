@@ -27,6 +27,7 @@ export default function CreateMonsterScreen() {
         flavor: values.flavor,
         rank_position: Number.parseInt(values.rankPosition, 10),
         would_buy_again: values.wouldBuyAgain,
+        rating: values.rating,
         notes: values.notes.trim().length > 0 ? values.notes.trim() : null,
       });
       if (pickedImage) {
@@ -52,6 +53,7 @@ export default function CreateMonsterScreen() {
           flavor: '',
           rankPosition: String(monsterCount + 1),
           wouldBuyAgain: true,
+          rating: null,
           notes: '',
         }}
         maxRankPosition={monsterCount + 1}

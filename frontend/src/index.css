@@ -351,6 +351,7 @@ body {
 
 .top-nav-tabs {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.5rem;
 }
 
@@ -369,4 +370,70 @@ body {
   border-color: transparent;
   opacity: 1;
   font-weight: 600;
+}
+
+/* ---- Rating (secondary to the rank badge) ---- */
+.monster-card-rating {
+  margin: 0 0 0.4rem;
+  font-size: 0.85rem;
+  opacity: 0.85;
+}
+
+.rating-input {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  font-size: 0.9rem;
+}
+
+.rating-input-row {
+  display: flex;
+  align-items: stretch;
+  gap: 0.5rem;
+}
+
+.rating-input-value {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  background: #0f1115;
+  border: 1px solid #3a3f4a;
+  border-radius: 6px;
+}
+
+.rating-input-value small {
+  font-size: 0.85rem;
+  font-weight: 400;
+  opacity: 0.7;
+  margin-left: 0.25rem;
+}
+
+.rating-input-step,
+.rating-input-clear {
+  min-height: 48px;
+  border-radius: 6px;
+  border: 1px solid #3a3f4a;
+  background: #22262f;
+  color: #f2f2f2;
+  font: inherit;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.rating-input-step {
+  flex: 0 0 56px;
+  font-size: 1.6rem;
+  line-height: 1;
+}
+
+.rating-input-step:disabled,
+.rating-input-clear:disabled {
+  opacity: 0.4;
+  cursor: default;
 }
