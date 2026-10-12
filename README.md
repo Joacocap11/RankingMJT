@@ -346,7 +346,7 @@ cd mobile
 npm ci
 npx tsc --noEmit    # limpio
 npx expo lint       # limpio
-npx expo-doctor     # (ver nota: puede avisar desfasajes de parches de SDK)
+npx expo-doctor     # 18/18 checks OK
 ```
 
 No se genera APK en esta fase. Se agregó `expo-updates` (OTA) y se validó
